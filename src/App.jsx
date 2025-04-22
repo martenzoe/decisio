@@ -4,6 +4,8 @@ import Register from './components/Register'
 import Logout from './components/Logout'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
+import ProtectedRoute from './components/ProtectedRoute'
+
 
 function App() {
   const [user, setUser] = useState(null)
@@ -39,7 +41,15 @@ function App() {
         <Route path="/" element={<h1 className="text-2xl">Startseite</h1>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<h2>🎯 Dashboard (später geschützt)</h2>} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute user={user}>
+                <h2 className="text-2xl">🎯 Dashboard (geschützt)</h2>
+            </ProtectedRoute>
+  }
+/>
+
       </Routes>
     </div>
   )
