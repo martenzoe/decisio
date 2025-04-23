@@ -3,9 +3,15 @@ import { useAuthStore } from '../store/useAuthStore'
 import { saveDecision } from '../lib/supabaseHelpers/saveDecision'
 import { saveOptions } from '../lib/supabaseHelpers/saveOptions'
 import { saveCriteria } from '../lib/supabaseHelpers/saveCriteria'
+import { useNavigate } from 'react-router-dom'
 
 function NewDecision() {
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
+
   const [decisionName, setDecisionName] = useState('')
+  const [description, setDescription] = useState('')
+  const [mode, setMode] = useState('manual')
   const [options, setOptions] = useState([''])
   const [criteria, setCriteria] = useState([{ name: '', weight: '' }])
 
@@ -14,22 +20,18 @@ function NewDecision() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const userId = useAuthStore.getState().user.id
 
-    try {
-      const decision = await saveDecision(decisionName, userId)
-      await saveOptions(options, decision.id)
-      await saveCriteria(criteria, decision.id)
+    const decision = await saveDecision({
+      name: decisionName,
+      description,
+      mode,
+      userId: user.id,
+    })
 
-      alert('✅ Entscheidung erfolgreich gespeichert!')
-      // Optionale Reset-Logik:
-      setDecisionName('')
-      setOptions([''])
-      setCriteria([{ name: '', weight: '' }])
-    } catch (error) {
-      console.error('❌ Fehler beim Speichern:', error)
-      alert('Fehler beim Speichern. Siehe Konsole.')
-    }
+    await saveOptions(options, decision.id)
+    await saveCriteria(criteria, decision.id)
+
+    navigate('/history')
   }
 
   return (
@@ -37,6 +39,8 @@ function NewDecision() {
       <h2 className="text-2xl font-bold">➕ Neue Entscheidung erstellen</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* Entscheidungsname */}
         <div>
           <label className="block font-semibold">Entscheidungsname</label>
           <input
@@ -48,6 +52,33 @@ function NewDecision() {
           />
         </div>
 
+        {/* Beschreibung */}
+        <div>
+          <label className="block font-semibold">Beschreibung der Situation</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            rows={4}
+            placeholder="Was möchtest du entscheiden? Wie ist deine Situation?"
+            required
+          />
+        </div>
+
+        {/* Bewertungsmethode */}
+        <div>
+          <label className="block font-semibold">Bewertungsmethode</label>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="manual">🧍 Manuell bewerten</option>
+            <option value="ai">🤖 KI-Recherche & Bewertung</option>
+          </select>
+        </div>
+
+        {/* Optionen */}
         <div>
           <label className="block font-semibold">Optionen</label>
           {options.map((option, index) => (
@@ -70,6 +101,7 @@ function NewDecision() {
           </button>
         </div>
 
+        {/* Kriterien */}
         <div>
           <label className="block font-semibold">Kriterien mit Gewichtung (%)</label>
           {criteria.map((criterion, index) => (
