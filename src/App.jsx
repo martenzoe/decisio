@@ -4,11 +4,21 @@ import Register from './components/Register'
 import Logout from './components/Logout'
 import { useEffect, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
+import { useAuthStore } from './store/useAuthStore'
 import ProtectedRoute from './components/ProtectedRoute'
+import Dashboard from './pages/Dashboard'
+import NewDecision from './pages/NewDecision'
+import Evaluation from './pages/Evaluation'
+import History from './pages/History'
+import DecisionDetail from './pages/DecisionDetail'
+import EditDecision from './pages/EditDecision'
+import EvaluateDecision from './pages/EvaluateDecision'
+
+
 
 
 function App() {
-  const [user, setUser] = useState(null)
+  const { user, setUser } = useAuthStore()
 
   useEffect(() => {
     const getUser = async () => {
@@ -25,7 +35,8 @@ function App() {
     return () => {
       listener.subscription.unsubscribe()
     }
-  }, [])
+  }, [setUser])
+
 
   return (
     <div className="p-6">
@@ -44,11 +55,67 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute user={user}>
-                <h2 className="text-2xl">🎯 Dashboard (geschützt)</h2>
+            <ProtectedRoute>
+              <Dashboard />
             </ProtectedRoute>
-  }
-/>
+          }
+        />
+
+        <Route
+          path="/new-decision"
+          element={
+            <ProtectedRoute>
+              <NewDecision />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/evaluation"
+          element={
+            <ProtectedRoute>
+              <Evaluation />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <History />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/decision/:id"
+          element={
+            <ProtectedRoute>
+              <DecisionDetail />
+            </ProtectedRoute>
+          }
+        />
+  
+
+        <Route
+          path="/decision/:id/edit"
+          element={
+            <ProtectedRoute>
+              <EditDecision />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/decision/:id/evaluate"
+          element={
+            <ProtectedRoute>
+              <EvaluateDecision />
+            </ProtectedRoute>
+          }
+        />
+
 
       </Routes>
     </div>
