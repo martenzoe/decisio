@@ -13,7 +13,6 @@ function EvaluateDecision() {
   const [gptScores, setGptScores] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Daten laden
   useEffect(() => {
     const fetchData = async () => {
       const { data: decisionData } = await supabase
@@ -52,7 +51,33 @@ function EvaluateDecision() {
           options: optionsData.map(o => o.name),
           criteria: criteriaData
         })
+
         setGptScores(gptResult)
+
+        // GPT-Ergebnisse speichern
+        const aiEvaluations = []
+
+        for (const entry of gptResult) {
+          const optionObj = optionsData.find((o) => o.name === entry.option)
+          if (!optionObj) continue
+
+          for (const criterion of criteriaData) {
+            aiEvaluations.push({
+              option_id: optionObj.id,
+              criterion_id: criterion.id,
+              score: entry.score,
+            })
+          }
+        }
+
+        if (aiEvaluations.length > 0) {
+          await supabase
+            .from('evaluations')
+            .delete()
+            .in('option_id', optionsData.map((o) => o.id))
+
+          await supabase.from('evaluations').insert(aiEvaluations)
+        }
       }
 
       setDecision(decisionData)
