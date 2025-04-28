@@ -1,13 +1,23 @@
 import { supabase } from '../supabaseClient'
 
-export async function saveDecision(decisionName, userId) {
+export async function saveDecision({ name, description, mode, userId }) {
   const { data, error } = await supabase
     .from('decisions')
-    .insert([{ name: decisionName, user_id: userId }])
+    .insert([
+      {
+        name,
+        description,
+        mode,
+        user_id: userId,
+      },
+    ])
     .select()
     .single()
 
-  if (error) throw new Error('❌ Fehler beim Speichern der Entscheidung: ' + error.message)
+  if (error) {
+    console.error('❌ Fehler beim Speichern der Entscheidung:', error)
+    throw new Error(error.message)
+  }
 
-  return data // enthält z. B. decision_id
+  return data // z.B. { id, name, ... }
 }

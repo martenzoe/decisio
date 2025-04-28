@@ -1,13 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { saveDecision } from '../lib/supabaseHelpers/saveDecision'
 import { saveOptions } from '../lib/supabaseHelpers/saveOptions'
 import { saveCriteria } from '../lib/supabaseHelpers/saveCriteria'
-import { useNavigate } from 'react-router-dom'
 
 function NewDecision() {
-  const { user } = useAuthStore()
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
 
   const [decisionName, setDecisionName] = useState('')
   const [description, setDescription] = useState('')
@@ -21,17 +21,25 @@ function NewDecision() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const decision = await saveDecision({
-      name: decisionName,
-      description,
-      mode,
-      userId: user.id,
-    })
+    try {
+      const decision = await saveDecision({
+        name: decisionName,
+        description,
+        mode,
+        userId: user.id,
+      })
 
-    await saveOptions(options, decision.id)
-    await saveCriteria(criteria, decision.id)
+      if (!decision?.id) throw new Error('Fehlende Entscheidung-ID')
 
-    navigate('/history')
+      await saveOptions(options, decision.id)
+      await saveCriteria(criteria, decision.id)
+
+      // ✅ Weiterleitung zur Bewertungsseite
+      navigate(`/decision/${decision.id}/evaluate`)
+    } catch (err) {
+      console.error('❌ Fehler beim Speichern der Entscheidung:', err)
+      alert('Fehler beim Speichern der Entscheidung.')
+    }
   }
 
   return (
@@ -39,7 +47,6 @@ function NewDecision() {
       <h2 className="text-2xl font-bold">➕ Neue Entscheidung erstellen</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
         {/* Entscheidungsname */}
         <div>
           <label className="block font-semibold">Entscheidungsname</label>
@@ -54,14 +61,13 @@ function NewDecision() {
 
         {/* Beschreibung */}
         <div>
-          <label className="block font-semibold">Beschreibung der Situation</label>
+          <label className="block font-semibold">Beschreibung der Entscheidung</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full border px-3 py-2 rounded"
-            rows={4}
-            placeholder="Was möchtest du entscheiden? Wie ist deine Situation?"
-            required
+            rows={3}
+            placeholder="Beschreibe deine Situation oder worum es bei der Entscheidung geht"
           />
         </div>
 
@@ -73,8 +79,8 @@ function NewDecision() {
             onChange={(e) => setMode(e.target.value)}
             className="w-full border px-3 py-2 rounded"
           >
-            <option value="manual">🧍 Manuell bewerten</option>
-            <option value="ai">🤖 KI-Recherche & Bewertung</option>
+            <option value="manual">🔍 Manuelle Bewertung</option>
+            <option value="ai">🤖 KI-gestützte Bewertung</option>
           </select>
         </div>
 
