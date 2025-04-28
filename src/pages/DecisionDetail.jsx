@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
+import { deleteDecision } from '../lib/supabaseHelpers/deleteDecision'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
 function DecisionDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
+
   const [decision, setDecision] = useState(null)
   const [options, setOptions] = useState([])
   const [criteria, setCriteria] = useState([])
@@ -126,6 +129,19 @@ function DecisionDetail() {
     document.body.removeChild(link)
   }
 
+  const handleDelete = async () => {
+    if (confirm('Möchtest du diese Entscheidung wirklich löschen?')) {
+      try {
+        await deleteDecision(decision.id)
+        alert('✅ Entscheidung gelöscht.')
+        navigate('/history') // zurück zur Übersicht
+      } catch (error) {
+        console.error(error)
+        alert('❌ Fehler beim Löschen!')
+      }
+    }
+  }
+
   if (loading) return <p className="p-4">⏳ Lädt Entscheidung...</p>
   if (!decision) return <p className="p-4">❌ Entscheidung nicht gefunden.</p>
 
@@ -140,6 +156,12 @@ function DecisionDetail() {
           <Link to={`/decision/${id}/evaluate`} className="text-green-600 underline">
             🧮 Bewertung starten
           </Link>
+          <button
+            onClick={handleDelete}
+            className="text-red-600 underline"
+          >
+            🗑️ Löschen
+          </button>
         </div>
       </div>
 
