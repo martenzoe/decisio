@@ -29,12 +29,13 @@ function Login() {
   }
 
   return (
-    <div className="w-screen h-screen bg-[#A7D7C5] flex items-center justify-center relative overflow-hidden">
-      {/* Deko-Formen */}
-      <div className="absolute w-[750px] h-[750px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -left-[300px] top-20 opacity-50" />
-      <div className="absolute w-[750px] h-[750px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] right-[-300px] bottom-20 opacity-50" />
+    <div className="fixed inset-0 bg-[#A7D7C5] flex items-center justify-center overflow-hidden">
+      {/* Linke Deko-Form */}
+      <div className="absolute w-[900px] h-[900px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -left-[450px] top-1/2 -translate-y-1/2 opacity-50" />
+      {/* Rechte Deko-Form */}
+      <div className="absolute w-[900px] h-[900px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -right-[450px] top-1/2 -translate-y-1/2 opacity-50" />
 
-      {/* Login-Card */}
+      {/* Login Card */}
       <div className="relative z-10 bg-[#F6FBF9] rounded-3xl shadow-2xl p-10 w-[90%] max-w-md flex flex-col items-center">
         <h1 className="text-3xl font-bold text-[#212B27] mb-4 text-center">Welcome Back</h1>
         <p className="text-center text-[#32403B] mb-8">

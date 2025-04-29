@@ -14,32 +14,31 @@ function Register() {
     if (error) {
       setMessage(error.message)
     } else {
-      setMessage('✅ Bitte bestätige deine E-Mail-Adresse.')
+      setMessage('Bitte bestätige deine E-Mail-Adresse.')
     }
   }
 
   return (
-    <div className="min-h-screen bg-[#A7D7C5] flex items-center justify-center relative overflow-hidden">
-      
-      {/* Hintergrund-Formen */}
-      <div className="absolute w-[750px] h-[750px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -left-[250px] top-20" />
-      <div className="absolute w-[750px] h-[750px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] right-[-250px] bottom-20" />
-      
-      {/* Formular-Card */}
-      <div className="bg-[#F6FBF9] rounded-[49px] shadow-xl p-12 w-full max-w-md z-10 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-[#212B27] mb-4">Create An Account</h1>
-        <p className="text-[#32403B] mb-8 text-sm md:text-base">
+    <div className="fixed inset-0 bg-[#A7D7C5] flex items-center justify-center overflow-hidden">
+      {/* Linke Deko-Form */}
+      <div className="absolute w-[900px] h-[900px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -left-[450px] top-1/2 -translate-y-1/2 opacity-50" />
+      {/* Rechte Deko-Form */}
+      <div className="absolute w-[900px] h-[900px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -right-[450px] top-1/2 -translate-y-1/2 opacity-50" />
+
+      {/* Register Card */}
+      <div className="relative z-10 bg-[#F6FBF9] rounded-3xl shadow-2xl p-10 w-[90%] max-w-md flex flex-col items-center">
+        <h1 className="text-3xl font-bold text-[#212B27] mb-4 text-center">Create An Account</h1>
+        <p className="text-center text-[#32403B] mb-8">
           Create an account to enjoy all the services without any ads for free!
         </p>
 
-        {/* Formular */}
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleRegister} className="space-y-6 w-full">
           <input
             type="email"
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84C7AE]"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84C7AE] bg-gray-100"
             required
           />
           <input
@@ -47,7 +46,7 @@ function Register() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84C7AE]"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84C7AE] bg-gray-100"
             required
           />
           <button
@@ -58,14 +57,13 @@ function Register() {
           </button>
         </form>
 
-        {/* Statusnachricht */}
         {message && (
-          <p className="mt-4 text-sm text-[#32403B]">{message}</p>
+          <p className="mt-4 text-sm text-[#32403B] text-center">{message}</p>
         )}
 
-        <p className="mt-6 text-sm text-[#32403B]">
-          Already Have An Account?{' '}
-          <Link to="/login" className="text-[#32403B] underline">
+        <p className="mt-6 text-sm text-center text-[#32403B]">
+          Already have an account?{' '}
+          <Link to="/login" className="text-[#32403B] underline font-semibold">
             Sign In
           </Link>
         </p>

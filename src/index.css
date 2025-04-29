@@ -1,11 +1,14 @@
 @import "tailwindcss";
 
-/* Volle Höhe & Breite + kein Rand für html + body */
+/* Reset für die volle Breite */
 html,
 body,
 #root {
-  height: 100%;
-  width: 100%;
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
+}
+body {
+  @apply bg-[#A7D7C5];
 }
