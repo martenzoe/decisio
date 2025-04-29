@@ -1,8 +1,8 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import Login from './components/Login'
 import Register from './components/Register'
 import Logout from './components/Logout'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { useAuthStore } from './store/useAuthStore'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -14,11 +14,9 @@ import DecisionDetail from './pages/DecisionDetail'
 import EditDecision from './pages/EditDecision'
 import EvaluateDecision from './pages/EvaluateDecision'
 
-
-
-
 function App() {
   const { user, setUser } = useAuthStore()
+  const location = useLocation()
 
   useEffect(() => {
     const getUser = async () => {
@@ -37,16 +35,20 @@ function App() {
     }
   }, [setUser])
 
+  // Seiten, auf denen KEINE Navbar angezeigt werden soll
+  const hideNavbar = location.pathname === '/login' || location.pathname === '/register'
 
   return (
     <div className="p-6">
-      <nav className="flex gap-4 mb-6">
-        <Link to="/">Home</Link>
-        {!user && <Link to="/login">Login</Link>}
-        {!user && <Link to="/register">Register</Link>}
-        {user && <Link to="/dashboard">Dashboard</Link>}
-        {user && <Logout />}
-      </nav>
+      {!hideNavbar && (
+        <nav className="flex gap-4 mb-6">
+          <Link to="/">Home</Link>
+          {!user && <Link to="/login">Login</Link>}
+          {!user && <Link to="/register">Register</Link>}
+          {user && <Link to="/dashboard">Dashboard</Link>}
+          {user && <Logout />}
+        </nav>
+      )}
 
       <Routes>
         <Route path="/" element={<h1 className="text-2xl">Startseite</h1>} />
@@ -60,7 +62,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/new-decision"
           element={
@@ -69,7 +70,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/evaluation"
           element={
@@ -78,7 +78,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/history"
           element={
@@ -87,7 +86,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/decision/:id"
           element={
@@ -96,8 +94,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-  
-
         <Route
           path="/decision/:id/edit"
           element={
@@ -106,7 +102,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/decision/:id/evaluate"
           element={
@@ -115,8 +110,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-
       </Routes>
     </div>
   )
