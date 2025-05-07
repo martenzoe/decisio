@@ -1,20 +1,24 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import { createClient } from '@supabase/supabase-js'
+import authRoutes from './routes/auth.js'
+import decisionsRoutes from './routes/decisions.js'
 
 dotenv.config()
 
 const app = express()
+const PORT = process.env.PORT || 3000
+
 app.use(cors())
 app.use(express.json())
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+app.use('/api', authRoutes)
+app.use('/api/decision', decisionsRoutes)
 
-// Testroute
-app.get('/api/ping', (req, res) => {
-  res.send('✅ API läuft')
+app.get('/', (req, res) => {
+  res.send('🚀 API is running...')
 })
 
-const PORT = process.env.PORT || 5000
-app.listen(PORT, () => console.log(`Server läuft auf Port ${PORT}`))
+app.listen(PORT, () => {
+  console.log(`✅ Server läuft auf http://localhost:${PORT}`)
+})
