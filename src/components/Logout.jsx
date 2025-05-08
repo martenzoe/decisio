@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabaseClient';
 
 function Logout() {
   const handleLogout = async () => {

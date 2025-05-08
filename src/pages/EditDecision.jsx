@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
-import { updateDecision } from '../lib/supabaseHelpers/updateDecision'
 
 function EditDecision() {
   const { id } = useParams()

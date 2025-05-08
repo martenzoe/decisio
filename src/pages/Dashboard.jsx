@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
 import { useAuthStore } from '../store/useAuthStore'
 import { Link } from 'react-router-dom'
 import { Lightbulb, BarChart2, FileText, Star, Activity } from 'lucide-react'
@@ -7,68 +6,34 @@ import { motion } from 'framer-motion'
 
 function Dashboard() {
   const { user } = useAuthStore()
-  const [recentDecisions, setRecentDecisions] = useState([])
-  const [allDecisions, setAllDecisions] = useState([])
+  const [decisions, setDecisions] = useState([])
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: decisions } = await supabase
-        .from('decisions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+      const token = localStorage.getItem('token')
+      if (!token) return
 
-      const enriched = await Promise.all(decisions.map(async (decision) => {
-        const { data: options } = await supabase
-          .from('options')
-          .select('*')
-          .eq('decision_id', decision.id)
+      try {
+        const res = await fetch('http://localhost:3000/api/decisions', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
 
-        const { data: criteria } = await supabase
-          .from('criteria')
-          .select('*')
-          .eq('decision_id', decision.id)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Error fetching decisions')
 
-        const { data: evaluations } = await supabase
-          .from('evaluations')
-          .select('*')
-          .in('option_id', options.map(o => o.id))
-
-        const calculateScore = (optionId) => {
-          let total = 0
-          let totalWeight = 0
-          criteria.forEach((crit) => {
-            const score = evaluations.find(e => e.option_id === optionId && e.criterion_id === crit.id)?.score || 0
-            total += score * crit.weight
-            totalWeight += crit.weight
-          })
-          return totalWeight > 0 ? total / totalWeight : 0
-        }
-
-        const scoredOptions = options.map((opt) => ({
-          ...opt,
-          score: calculateScore(opt.id)
-        }))
-
-        const best = scoredOptions.sort((a, b) => b.score - a.score)[0]
-
-        return {
-          ...decision,
-          bestOption: best?.name || '—',
-          bestScore: best?.score?.toFixed(2) || null,
-          lastEdited: decision.updated_at || decision.created_at
-        }
-      }))
-
-      setAllDecisions(enriched)
-      setRecentDecisions(enriched.slice(0, 3))
+        setDecisions(data)
+      } catch (err) {
+        console.error('Error loading decisions:', err.message)
+      }
     }
 
     fetchData()
-  }, [user])
+  }, [])
 
-  const filtered = allDecisions.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = decisions.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="fixed inset-0 bg-[#A7D7C5] flex items-center justify-center overflow-hidden">
@@ -101,14 +66,14 @@ function Dashboard() {
             <BarChart2 className="text-[#84C7AE]" />
             <div>
               <p className="text-gray-600 text-sm">Total Decisions</p>
-              <p className="text-xl font-bold text-[#212B27]">{allDecisions.length}</p>
+              <p className="text-xl font-bold text-[#212B27]">{decisions.length}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow px-6 py-5 flex items-center gap-4">
             <Activity className="text-[#84C7AE]" />
             <div>
               <p className="text-gray-600 text-sm">Recently Updated</p>
-              <p className="text-sm text-[#32403B]">{allDecisions[0]?.name || '—'}</p>
+              <p className="text-sm text-[#32403B]">{decisions[0]?.name || '—'}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow px-6 py-5 flex items-center gap-4">
@@ -134,12 +99,11 @@ function Dashboard() {
                 <FileText className="text-[#84C7AE]" />
                 <div>
                   <h3 className="font-bold text-lg text-[#212B27]">{d.name}</h3>
-                  <p className="text-xs text-gray-500">Last edited: {new Date(d.lastEdited).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">{new Date(d.created_at).toLocaleString()}</p>
                 </div>
               </div>
               <p className="text-sm text-gray-700">
-                Best Option: <span className="font-semibold">{d.bestOption}</span>{' '}
-                {d.bestScore && `(${d.bestScore})`}
+                Best Option: <span className="font-semibold">{d.bestOption || 'N/A'}</span>
               </p>
               <Link
                 to={`/decision/${d.id}`}

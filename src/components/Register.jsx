@@ -1,70 +1,70 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
-import { Link } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 
 function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const navigate = useNavigate()
 
   const handleRegister = async (e) => {
     e.preventDefault()
-    const { error } = await supabase.auth.signUp({ email, password })
+    setMessage('⏳ Registrierung läuft...')
 
-    if (error) {
-      setMessage(error.message)
-    } else {
-      setMessage('Bitte bestätige deine E-Mail-Adresse.')
+    try {
+      const res = await fetch('http://localhost:3000/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) throw new Error(data.error || 'Registrierung fehlgeschlagen')
+
+      setMessage('✅ Registrierung erfolgreich! Jetzt einloggen...')
+      setTimeout(() => navigate('/login'), 1500)
+    } catch (err) {
+      console.error(err)
+      setMessage(err.message)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-[#A7D7C5] flex items-center justify-center overflow-hidden">
-      {/* Linke Deko-Form */}
-      <div className="absolute w-[900px] h-[900px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -left-[450px] top-1/2 -translate-y-1/2 opacity-50" />
-      {/* Rechte Deko-Form */}
-      <div className="absolute w-[900px] h-[900px] bg-[#C1E3D6] rounded-[160px] rotate-[-45deg] -right-[450px] top-1/2 -translate-y-1/2 opacity-50" />
-
-      {/* Register Card */}
-      <div className="relative z-10 bg-[#F6FBF9] rounded-3xl shadow-2xl p-10 w-[90%] max-w-md flex flex-col items-center">
-        <h1 className="text-3xl font-bold text-[#212B27] mb-4 text-center">Create An Account</h1>
-        <p className="text-center text-[#32403B] mb-8">
-          Create an account to enjoy all the services without any ads for free!
-        </p>
-
-        <form onSubmit={handleRegister} className="space-y-6 w-full">
+    <div className="min-h-screen flex items-center justify-center bg-[#A7D7C5]">
+      <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md space-y-6">
+        <h2 className="text-2xl font-bold text-center text-[#212B27]">Register</h2>
+        <form onSubmit={handleRegister} className="space-y-4">
           <input
             type="email"
-            placeholder="Email Address"
+            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84C7AE] bg-gray-100"
+            className="w-full border px-3 py-2 rounded"
             required
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Passwort"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#84C7AE] bg-gray-100"
+            className="w-full border px-3 py-2 rounded"
             required
           />
           <button
             type="submit"
-            className="w-full bg-[#84C7AE] hover:bg-[#6DB99F] text-white font-bold py-3 rounded-lg text-lg transition-all"
+            className="w-full bg-[#84C7AE] hover:bg-[#6DB99F] text-white py-2 rounded font-semibold"
           >
-            Create Account
+            Register
           </button>
         </form>
-
-        {message && (
-          <p className="mt-4 text-sm text-[#32403B] text-center">{message}</p>
-        )}
-
-        <p className="mt-6 text-sm text-center text-[#32403B]">
+        {message && <p className="text-center text-sm text-gray-700">{message}</p>}
+        <p className="text-sm text-center text-[#32403B]">
           Already have an account?{' '}
           <Link to="/login" className="text-[#32403B] underline font-semibold">
-            Sign In
+            Login
           </Link>
         </p>
       </div>

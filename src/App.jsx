@@ -3,7 +3,6 @@ import Login from './components/Login'
 import Register from './components/Register'
 import Logout from './components/Logout'
 import { useEffect } from 'react'
-import { supabase } from './lib/supabaseClient'
 import { useAuthStore } from './store/useAuthStore'
 import ProtectedRoute from './components/ProtectedRoute'
 import Dashboard from './pages/Dashboard'
@@ -19,19 +18,9 @@ function App() {
   const location = useLocation()
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user || null)
-    }
-
-    getUser()
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null)
-    })
-
-    return () => {
-      listener.subscription.unsubscribe()
+    const token = localStorage.getItem('token')
+    if (token) {
+      setUser({ token })
     }
   }, [setUser])
 

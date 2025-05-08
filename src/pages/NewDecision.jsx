@@ -1,44 +1,68 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/useAuthStore'
-import { saveDecision } from '../lib/supabaseHelpers/saveDecision'
-import { saveOptions } from '../lib/supabaseHelpers/saveOptions'
-import { saveCriteria } from '../lib/supabaseHelpers/saveCriteria'
 
 function NewDecision() {
-  const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-
   const [decisionName, setDecisionName] = useState('')
+  const [decisionType, setDecisionType] = useState('manual') // "manual" | "ai"
   const [description, setDescription] = useState('')
-  const [mode, setMode] = useState('manual')
   const [options, setOptions] = useState([''])
   const [criteria, setCriteria] = useState([{ name: '', weight: '' }])
+  const navigate = useNavigate()
 
   const handleAddOption = () => setOptions([...options, ''])
-  const handleAddCriterion = () => setCriteria([...criteria, { name: '', weight: '' }])
+  const handleAddCriterion = () =>
+    setCriteria([...criteria, { name: '', weight: '' }])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
     try {
-      const decision = await saveDecision({
-        name: decisionName,
-        description,
-        mode,
-        userId: user.id,
+      const token = localStorage.getItem('token')
+      if (!token) throw new Error('⛔ Kein Token gefunden')
+
+      // 1. Entscheidung speichern (mit Typ & Beschreibung)
+      const res = await fetch('http://localhost:3000/api/decision', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: decisionName,
+          type: decisionType,
+          description,
+        }),
       })
 
-      if (!decision?.id) throw new Error('Fehlende Entscheidung-ID')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
 
-      await saveOptions(options, decision.id)
-      await saveCriteria(criteria, decision.id)
+      const decisionId = data.id
 
-      // ✅ Weiterleitung zur Bewertungsseite
-      navigate(`/decision/${decision.id}/evaluate`)
+      // 2. Optionen speichern
+      await fetch(`http://localhost:3000/api/decision/${decisionId}/options`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ options }),
+      })
+
+      // 3. Kriterien speichern
+      await fetch(`http://localhost:3000/api/decision/${decisionId}/criteria`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ criteria }),
+      })
+
+      alert('✅ Entscheidung gespeichert!')
+      navigate('/dashboard')
     } catch (err) {
-      console.error('❌ Fehler beim Speichern der Entscheidung:', err)
-      alert('Fehler beim Speichern der Entscheidung.')
+      console.error('❌ Fehler:', err.message)
+      alert('❌ Fehler beim Speichern der Entscheidung')
     }
   }
 
@@ -47,7 +71,6 @@ function NewDecision() {
       <h2 className="text-2xl font-bold">➕ Neue Entscheidung erstellen</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Entscheidungsname */}
         <div>
           <label className="block font-semibold">Entscheidungsname</label>
           <input
@@ -59,32 +82,46 @@ function NewDecision() {
           />
         </div>
 
-        {/* Beschreibung */}
         <div>
-          <label className="block font-semibold">Beschreibung der Entscheidung</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            rows={3}
-            placeholder="Beschreibe deine Situation oder worum es bei der Entscheidung geht"
-          />
+          <label className="block font-semibold mb-1">Entscheidungstyp</label>
+          <div className="flex gap-4">
+            <label>
+              <input
+                type="radio"
+                name="decisionType"
+                value="manual"
+                checked={decisionType === 'manual'}
+                onChange={() => setDecisionType('manual')}
+              />{' '}
+              Manuell
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="decisionType"
+                value="ai"
+                checked={decisionType === 'ai'}
+                onChange={() => setDecisionType('ai')}
+              />{' '}
+              KI-gestützt
+            </label>
+          </div>
         </div>
 
-        {/* Bewertungsmethode */}
-        <div>
-          <label className="block font-semibold">Bewertungsmethode</label>
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="manual">🔍 Manuelle Bewertung</option>
-            <option value="ai">🤖 KI-gestützte Bewertung</option>
-          </select>
-        </div>
+        {decisionType === 'ai' && (
+          <div>
+            <label className="block font-semibold">Beschreibung</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Beschreibe die Entscheidung, damit die KI dich unterstützen kann..."
+              className="w-full border px-3 py-2 rounded"
+              rows={4}
+              required
+            />
+          </div>
+        )}
 
-        {/* Optionen */}
         <div>
           <label className="block font-semibold">Optionen</label>
           {options.map((option, index) => (
@@ -102,12 +139,15 @@ function NewDecision() {
               required
             />
           ))}
-          <button type="button" onClick={handleAddOption} className="text-blue-600 underline text-sm">
+          <button
+            type="button"
+            onClick={handleAddOption}
+            className="text-blue-600 underline text-sm"
+          >
             ➕ Weitere Option
           </button>
         </div>
 
-        {/* Kriterien */}
         <div>
           <label className="block font-semibold">Kriterien mit Gewichtung (%)</label>
           {criteria.map((criterion, index) => (
@@ -138,12 +178,19 @@ function NewDecision() {
               />
             </div>
           ))}
-          <button type="button" onClick={handleAddCriterion} className="text-blue-600 underline text-sm">
+          <button
+            type="button"
+            onClick={handleAddCriterion}
+            className="text-blue-600 underline text-sm"
+          >
             ➕ Weiteres Kriterium
           </button>
         </div>
 
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
           Entscheidung speichern
         </button>
       </form>

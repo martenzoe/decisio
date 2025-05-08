@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
-import { deleteDecision } from '../lib/supabaseHelpers/deleteDecision'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
