@@ -1,21 +1,22 @@
+// server/middleware/verifyJWT.js
 import jwt from 'jsonwebtoken'
 
 const verifyJWT = (req, res, next) => {
-  const authHeader = req.headers.authorization
+  const authHeader = req.headers['authorization']
+  const token = authHeader && authHeader.split(' ')[1] // Format: Bearer <token>
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid token' })
+  if (!token) {
+    return res.status(401).json({ error: '🔐 Kein Token übermittelt' })
   }
 
-  const token = authHeader.split(' ')[1]
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(403).json({ error: '🚫 Ungültiger Token' })
+    }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-    req.user = decoded
+    req.userId = decoded.userId // Achtung: Muss mit dem Payload beim Login übereinstimmen
     next()
-  } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' })
-  }
+  })
 }
 
 export default verifyJWT

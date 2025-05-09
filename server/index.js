@@ -1,7 +1,10 @@
+// server/index.js
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
+import decisionRoutes from './routes/decisions.js'
+import userRoutes from './routes/users.js'
 
 dotenv.config()
 
@@ -11,10 +14,11 @@ const PORT = process.env.PORT || 3000
 app.use(cors())
 app.use(express.json())
 
-// API-Routen
+// Routen
 app.use('/api', authRoutes)
+app.use('/api/decision', decisionRoutes)
+app.use('/api/users', userRoutes)
 
-// Testroute
 app.get('/', (req, res) => {
   res.send('🚀 API is running...')
 })
