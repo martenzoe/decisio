@@ -9,169 +9,96 @@ function DecisionDetail() {
   const [decision, setDecision] = useState(null)
   const [options, setOptions] = useState([])
   const [criteria, setCriteria] = useState([])
-  const [evaluations, setEvaluations] = useState({})
-  const [message, setMessage] = useState('')
+  const [evaluations, setEvaluations] = useState([])
+  const [scoreMap, setScoreMap] = useState({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const [dRes, oRes, cRes, eRes] = await Promise.all([
-        fetch(`http://localhost:3000/api/decision/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://localhost:3000/api/decision/${id}/options`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://localhost:3000/api/decision/${id}/criteria`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`http://localhost:3000/api/decision/${id}/evaluations`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ])
-
-      const decision = await dRes.json()
-      const options = await oRes.json()
-      const criteria = await cRes.json()
-      const evaluationData = await eRes.json()
-
-      setDecision(decision)
-      setOptions(options)
-      setCriteria(criteria)
-
-      // 🧠 Initialisiere Bewertungen
-      const initial = {}
-      options.forEach((opt) => {
-        initial[opt.id] = {}
-        criteria.forEach((crit) => {
-          const found = evaluationData.find(
-            (ev) => ev.option_id === opt.id && ev.criterion_id === crit.id
-          )
-          initial[opt.id][crit.id] = found ? found.value : ''
+      try {
+        const res = await fetch(`http://localhost:3000/api/decision/${id}/details`, {
+          headers: { Authorization: `Bearer ${token}` }
         })
-      })
-      setEvaluations(initial)
-    }
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Fehler beim Laden')
 
+        setDecision(data.decision)
+        setOptions(data.options)
+        setCriteria(data.criteria)
+        setEvaluations(data.evaluations)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
     fetchData()
   }, [id])
 
-  const handleChange = (optId, critId, value) => {
-    setEvaluations((prev) => ({
-      ...prev,
-      [optId]: {
-        ...prev[optId],
-        [critId]: value,
-      },
-    }))
-  }
+  useEffect(() => {
+    const calculateScores = () => {
+      const scoreObj = {}
+      options.forEach(opt => {
+        const evals = evaluations.filter(e => e.option_id === opt.id)
+        let total = 0
+        let weightSum = 0
 
-  const calculateScore = (optId) => {
-    const scores = evaluations[optId]
-    let total = 0
-    let weightSum = 0
-
-    for (const critId in scores) {
-      const crit = criteria.find((c) => c.id === critId)
-      const weight = crit?.weight || 0
-      const value = Number(scores[critId]) || 0
-      total += value * weight
-      weightSum += weight
-    }
-
-    return weightSum ? Math.round(total / weightSum) : 0
-  }
-
-  const handleSave = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) return
-
-    const payload = []
-    for (const optId in evaluations) {
-      for (const critId in evaluations[optId]) {
-        payload.push({
-          option_id: optId,
-          criterion_id: critId,
-          value: Number(evaluations[optId][critId]) || 0,
+        evals.forEach(ev => {
+          const criterion = criteria.find(c => c.id === ev.criterion_id)
+          if (!criterion) return
+          const weight = criterion.importance || 0
+          const value = ev.value || 0
+          total += weight * value
+          weightSum += weight
         })
-      }
+
+        scoreObj[opt.id] = weightSum ? Math.round(total / weightSum) : 0
+      })
+      setScoreMap(scoreObj)
     }
 
-    const res = await fetch(`http://localhost:3000/api/decision/${id}/evaluations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ evaluations: payload }),
-    })
-
-    const data = await res.json()
-
-    if (res.ok) {
-      setMessage('✅ Bewertung gespeichert!')
-    } else {
-      setMessage(`❌ Fehler: ${data.error || 'Speichern fehlgeschlagen'}`)
+    if (options.length && criteria.length && evaluations.length) {
+      calculateScores()
     }
-  }
+  }, [options, criteria, evaluations])
+
+  if (loading) return <div className="text-center py-10">⏳ Lädt ...</div>
 
   return (
     <div className="max-w-4xl mx-auto py-10">
-      <h2 className="text-2xl font-bold mb-4">🔍 Entscheidung: {decision?.name}</h2>
-      <p className="mb-6">{decision?.description}</p>
+      <h2 className="text-2xl font-bold mb-2">🔍 Entscheidung: {decision?.name}</h2>
+      <p className="mb-6 text-gray-600">{decision?.description}</p>
 
       <div className="overflow-x-auto">
         <table className="min-w-full border">
           <thead>
             <tr>
               <th className="border p-2">Option</th>
-              {criteria.map((c) => (
-                <th key={c.id} className="border p-2">
-                  {c.name} ({c.weight})
-                </th>
+              {criteria.map(c => (
+                <th key={c.id} className="border p-2">{c.name} ({c.importance}%)</th>
               ))}
               <th className="border p-2">Score</th>
             </tr>
           </thead>
           <tbody>
-            {options.map((opt) => (
+            {options.map(opt => (
               <tr key={opt.id}>
                 <td className="border p-2 font-semibold">{opt.name}</td>
-                {criteria.map((crit) => (
-                  <td key={crit.id} className="border p-2">
-                    <input
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={evaluations[opt.id]?.[crit.id] || ''}
-                      onChange={(e) =>
-                        handleChange(opt.id, crit.id, e.target.value)
-                      }
-                      className="w-16 px-2 py-1 border rounded"
-                    />
-                  </td>
-                ))}
-                <td className="border p-2 font-bold text-center">
-                  {calculateScore(opt.id)}
-                </td>
+                {criteria.map(crit => {
+                  const ev = evaluations.find(e => e.option_id === opt.id && e.criterion_id === crit.id)
+                  return (
+                    <td key={crit.id} className="border p-2 text-center">{ev?.value ?? '-'}</td>
+                  )
+                })}
+                <td className="border p-2 font-bold text-center">{scoreMap[opt.id] ?? 0}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      <div className="mt-6 text-center">
-        <button
-          onClick={handleSave}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
-        >
-          💾 Bewertung speichern
-        </button>
-      </div>
-
-      {message && <p className="text-center mt-4 text-red-600">{message}</p>}
     </div>
   )
 }

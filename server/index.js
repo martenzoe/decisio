@@ -14,9 +14,8 @@ const PORT = process.env.PORT || 3000
 app.use(cors())
 app.use(express.json())
 
-// Routen
 app.use('/api', authRoutes)
-app.use('/api/decision', decisionRoutes)
+app.use('/api/decision', decisionRoutes) // ✅ Wichtig: Das darf NICHT fehlen!
 app.use('/api/users', userRoutes)
 
 app.get('/', (req, res) => {
