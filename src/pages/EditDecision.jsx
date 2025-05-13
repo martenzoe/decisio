@@ -1,92 +1,104 @@
+// src/pages/EditDecision.jsx
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/useAuthStore'
 
 function EditDecision() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuthStore()
 
-  const [decision, setDecision] = useState(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [mode, setMode] = useState('manual')
-  const [loading, setLoading] = useState(true)
+  const [type, setType] = useState('private')
 
   useEffect(() => {
     const fetchDecision = async () => {
-      const { data, error } = await supabase
-        .from('decisions')
-        .select('*')
-        .eq('id', id)
-        .single()
-
-      if (error) {
-        console.error('❌ Fehler beim Laden der Entscheidung:', error)
-      } else {
-        setDecision(data)
-        setName(data.name)
-        setDescription(data.description || '')
-        setMode(data.mode || 'manual')
+      const res = await fetch(`http://localhost:3000/api/decisions`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      })
+      const data = await res.json()
+      const decision = data.find(d => d.id === id)
+      if (decision) {
+        setName(decision.name)
+        setDescription(decision.description)
+        setMode(decision.mode)
+        setType(decision.type)
       }
-      setLoading(false)
     }
 
     fetchDecision()
-  }, [id])
+  }, [id, user.token])
 
   const handleUpdate = async (e) => {
     e.preventDefault()
+    const res = await fetch(`http://localhost:3000/api/decisions/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({ name, description, mode, type }),
+    })
 
-    try {
-      await updateDecision(id, { name, description, mode })
-      alert('✅ Entscheidung aktualisiert!')
-      navigate(`/decision/${id}`) // zurück zur Detailansicht
-    } catch (error) {
-      console.error(error)
-      alert('❌ Fehler beim Aktualisieren!')
+    if (res.ok) {
+      navigate(`/decision/${id}`)
+    } else {
+      alert('Fehler beim Aktualisieren')
     }
   }
 
-  if (loading) return <p className="p-4">⏳ Lädt...</p>
-  if (!decision) return <p className="p-4">❌ Entscheidung nicht gefunden.</p>
-
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h2 className="text-2xl font-bold">✏️ Entscheidung bearbeiten</h2>
-
+    <div className="max-w-2xl mx-auto mt-10">
+      <h2 className="text-2xl font-bold mb-4">✏️ Entscheidung bearbeiten</h2>
       <form onSubmit={handleUpdate} className="space-y-4">
         <div>
-          <label className="block font-semibold">Name</label>
+          <label className="block font-medium">Titel</label>
           <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
             className="w-full border px-3 py-2 rounded"
+            value={name}
+            onChange={e => setName(e.target.value)}
             required
           />
         </div>
-
         <div>
-          <label className="block font-semibold">Beschreibung (optional)</label>
+          <label className="block font-medium">Beschreibung</label>
           <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
             className="w-full border px-3 py-2 rounded"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={4}
           />
         </div>
-
-        <div>
-          <label className="block font-semibold">Bewertungsmethode</label>
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-          >
-            <option value="manual">Manuell</option>
-            <option value="ai">KI-gestützt</option>
-          </select>
+        <div className="flex gap-4">
+          <div>
+            <label className="block font-medium">Modus</label>
+            <select
+              className="border px-2 py-1 rounded"
+              value={mode}
+              onChange={e => setMode(e.target.value)}
+            >
+              <option value="manual">Manuell</option>
+              <option value="ai">KI-gestützt</option>
+            </select>
+          </div>
+          <div>
+            <label className="block font-medium">Typ</label>
+            <select
+              className="border px-2 py-1 rounded"
+              value={type}
+              onChange={e => setType(e.target.value)}
+            >
+              <option value="private">Privat</option>
+              <option value="public">Öffentlich</option>
+            </select>
+          </div>
         </div>
-
-        <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded">
+        <button
+          type="submit"
+          className="bg-blue-600 text-white px-4 py-2 rounded"
+        >
           💾 Entscheidung speichern
         </button>
       </form>

@@ -1,4 +1,3 @@
-// src/pages/NewDecision.jsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -51,6 +50,7 @@ function NewDecision() {
     if (!token) return alert('⛔ Kein Token gefunden')
 
     try {
+      // Entscheidung speichern
       const res = await fetch('http://localhost:3000/api/decision', {
         method: 'POST',
         headers: {
@@ -59,13 +59,13 @@ function NewDecision() {
         },
         body: JSON.stringify({ name: decisionName, description, mode, type })
       })
-
       const data = await res.json()
-      if (!res.ok) throw new Error(data.message)
+      if (!res.ok) throw new Error(data.error || 'Fehler bei Entscheidung')
 
       const decisionId = data.id
 
-      await fetch(`http://localhost:3000/api/decision/${decisionId}/options`, {
+      // Optionen speichern
+      const resOpt = await fetch(`http://localhost:3000/api/decision/${decisionId}/options`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -73,48 +73,86 @@ function NewDecision() {
         },
         body: JSON.stringify({ options })
       })
+      const dataOpt = await resOpt.json()
+      if (!resOpt.ok) throw new Error(dataOpt.error || 'Fehler bei Optionen')
 
-      await fetch(`http://localhost:3000/api/decision/${decisionId}/criteria`, {
+      // Kriterien vorbereiten (Zahlen sicherstellen!)
+      const formattedCriteria = criteria.map(c => ({
+        name: c.name,
+        importance: Number(c.importance)
+      }))
+
+      // Kriterien speichern
+      const resCrit = await fetch(`http://localhost:3000/api/decision/${decisionId}/criteria`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ criteria })
+        body: JSON.stringify({ criteria: formattedCriteria })
       })
+      const dataCrit = await resCrit.json()
+      if (!resCrit.ok) throw new Error(dataCrit.error || 'Fehler bei Kriterien')
 
+      // Bewertungen vorbereiten
       const evaluationsArray = []
       options.forEach((_, optIdx) => {
         criteria.forEach((_, critIdx) => {
           const value = Number(evaluations[optIdx]?.[critIdx])
           if (!isNaN(value)) {
-            evaluationsArray.push({ option_index: optIdx, criterion_index: critIdx, value })
+            evaluationsArray.push({
+              option_index: optIdx,
+              criterion_index: critIdx,
+              value
+            })
           }
         })
       })
 
-      await fetch(`http://localhost:3000/api/decision/${decisionId}/evaluations`, {
+      // Bewertungen speichern
+      const resEval = await fetch(`http://localhost:3000/api/decision/${decisionId}/evaluations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ evaluations: evaluationsArray, options, criteria })
+        body: JSON.stringify({
+          evaluations: evaluationsArray,
+          options,
+          criteria: formattedCriteria
+        })
       })
+      const dataEval = await resEval.json()
+      if (!resEval.ok) throw new Error(dataEval.error || 'Fehler bei Bewertungen')
 
+      // Weiterleitung
       navigate(`/decision/${decisionId}`)
+
     } catch (err) {
-      console.error('❌ Fehler:', err.message)
-      alert('❌ Fehler beim Speichern der Entscheidung')
+      console.error('❌ Fehler beim Speichern:', err.message)
+      alert(`❌ Fehler beim Speichern: ${err.message}`)
     }
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div className="space-y-6 max-w-2xl mx-auto py-10">
       <h2 className="text-2xl font-bold">➕ Neue Entscheidung erstellen</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input type="text" placeholder="Titel" value={decisionName} onChange={e => setDecisionName(e.target.value)} className="w-full border px-3 py-2 rounded" required />
-        <textarea placeholder="Beschreibung" value={description} onChange={e => setDescription(e.target.value)} className="w-full border px-3 py-2 rounded" rows="3" />
+        <input
+          type="text"
+          placeholder="Titel"
+          value={decisionName}
+          onChange={e => setDecisionName(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          required
+        />
+        <textarea
+          placeholder="Beschreibung"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          className="w-full border px-3 py-2 rounded"
+          rows="3"
+        />
 
         <select value={mode} onChange={e => setMode(e.target.value)} className="w-full border px-3 py-2 rounded">
           <option value="manual">Manuell</option>
@@ -129,31 +167,57 @@ function NewDecision() {
         <div>
           <label className="font-semibold">Optionen</label>
           {options.map((opt, i) => (
-            <input key={i} type="text" value={opt} onChange={(e) => {
-              const newOptions = [...options]
-              newOptions[i] = e.target.value
-              setOptions(newOptions)
-              updateEvaluations(newOptions, criteria)
-            }} className="w-full border px-3 py-2 rounded mb-2" required />
+            <input
+              key={i}
+              type="text"
+              value={opt}
+              onChange={(e) => {
+                const newOptions = [...options]
+                newOptions[i] = e.target.value
+                setOptions(newOptions)
+                updateEvaluations(newOptions, criteria)
+              }}
+              className="w-full border px-3 py-2 rounded mb-2"
+              required
+            />
           ))}
-          <button type="button" onClick={handleAddOption} className="text-blue-600 underline">➕ Weitere Option</button>
+          <button type="button" onClick={handleAddOption} className="text-blue-600 underline">
+            ➕ Weitere Option
+          </button>
         </div>
 
         <div>
           <label className="font-semibold">Kriterien (mit Gewichtung %)</label>
           {criteria.map((crit, i) => (
             <div key={i} className="flex gap-2 mb-2">
-              <input type="text" value={crit.name} onChange={e => {
-                const newCrit = [...criteria]; newCrit[i].name = e.target.value
-                setCriteria(newCrit); updateEvaluations(options, newCrit)
-              }} className="flex-1 border px-3 py-2 rounded" required />
-              <input type="number" value={crit.importance} onChange={e => {
-                const newCrit = [...criteria]; newCrit[i].importance = e.target.value
-                setCriteria(newCrit)
-              }} className="w-20 border px-3 py-2 rounded" required />
+              <input
+                type="text"
+                value={crit.name}
+                onChange={e => {
+                  const newCrit = [...criteria]
+                  newCrit[i].name = e.target.value
+                  setCriteria(newCrit)
+                  updateEvaluations(options, newCrit)
+                }}
+                className="flex-1 border px-3 py-2 rounded"
+                required
+              />
+              <input
+                type="number"
+                value={crit.importance}
+                onChange={e => {
+                  const newCrit = [...criteria]
+                  newCrit[i].importance = e.target.value
+                  setCriteria(newCrit)
+                }}
+                className="w-20 border px-3 py-2 rounded"
+                required
+              />
             </div>
           ))}
-          <button type="button" onClick={handleAddCriterion} className="text-blue-600 underline">➕ Weiteres Kriterium</button>
+          <button type="button" onClick={handleAddCriterion} className="text-blue-600 underline">
+            ➕ Weiteres Kriterium
+          </button>
         </div>
 
         <div>
@@ -173,7 +237,14 @@ function NewDecision() {
                   <td className="border p-2 font-semibold">{opt}</td>
                   {criteria.map((_, ci) => (
                     <td key={ci} className="border p-2">
-                      <input type="number" min="1" max="10" value={evaluations[oi]?.[ci] || ''} onChange={(e) => handleEvaluationChange(oi, ci, e.target.value)} className="w-16 px-2 py-1 border rounded" />
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={evaluations[oi]?.[ci] || ''}
+                        onChange={(e) => handleEvaluationChange(oi, ci, e.target.value)}
+                        className="w-16 px-2 py-1 border rounded"
+                      />
                     </td>
                   ))}
                 </tr>
@@ -182,7 +253,9 @@ function NewDecision() {
           </table>
         </div>
 
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Entscheidung speichern</button>
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+          Entscheidung speichern
+        </button>
       </form>
     </div>
   )

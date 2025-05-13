@@ -28,7 +28,7 @@ function App() {
   const hideNavbar = location.pathname === '/login' || location.pathname === '/register'
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-[#A7D7C5] p-6">
       {!hideNavbar && (
         <nav className="flex gap-4 mb-6">
           <Link to="/">Home</Link>
