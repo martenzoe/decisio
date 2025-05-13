@@ -1,20 +1,21 @@
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/useAuthStore'
 
 function Logout() {
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Fehler beim Logout:', error.message);
-    } else {
-      console.log('✅ Ausgeloggt');
-    }
-  };
+  const navigate = useNavigate()
+  const { setUser } = useAuthStore()
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    setUser(null)
+    navigate('/login')
+  }
 
   return (
-    <button onClick={handleLogout}>
+    <button onClick={handleLogout} className="text-red-600 underline">
       Logout
     </button>
-  );
+  )
 }
 
-export default Logout;
-
+export default Logout

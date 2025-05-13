@@ -1,241 +1,127 @@
+// src/pages/DecisionDetail.jsx
 import { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import { useParams } from 'react-router-dom'
+import { useAuthStore } from '../store/useAuthStore'
 
 function DecisionDetail() {
   const { id } = useParams()
-  const navigate = useNavigate()
-
+  const { user } = useAuthStore()
   const [decision, setDecision] = useState(null)
   const [options, setOptions] = useState([])
   const [criteria, setCriteria] = useState([])
-  const [evaluations, setEvaluations] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [evaluations, setEvaluations] = useState({})
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: decisionData, error: decisionError } = await supabase
-        .from('decisions')
-        .select('*')
-        .eq('id', id)
-        .single()
+      const token = localStorage.getItem('token')
+      if (!token) return
 
-      const { data: optionsData } = await supabase
-        .from('options')
-        .select('*')
-        .eq('decision_id', id)
+      const [dRes, oRes, cRes] = await Promise.all([
+        fetch(`http://localhost:3000/api/decision/${id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`http://localhost:3000/api/decision/${id}/options`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`http://localhost:3000/api/decision/${id}/criteria`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ])
 
-      const { data: criteriaData } = await supabase
-        .from('criteria')
-        .select('*')
-        .eq('decision_id', id)
+      const decision = await dRes.json()
+      const options = await oRes.json()
+      const criteria = await cRes.json()
 
-      const { data: evaluationsData } = await supabase
-        .from('evaluations')
-        .select('*')
-        .in('option_id', optionsData.map((o) => o.id))
+      setDecision(decision)
+      setOptions(options)
+      setCriteria(criteria)
 
-      if (decisionError) {
-        console.error('Fehler beim Laden:', decisionError)
-      } else {
-        setDecision(decisionData)
-        setOptions(optionsData || [])
-        setCriteria(criteriaData || [])
-        setEvaluations(evaluationsData || [])
-      }
-
-      setLoading(false)
+      const initial = {}
+      options.forEach((opt) => {
+        initial[opt.id] = {}
+        criteria.forEach((crit) => {
+          initial[opt.id][crit.id] = ''
+        })
+      })
+      setEvaluations(initial)
     }
 
     fetchData()
   }, [id])
 
-  const getScore = (optionId, criterionId) => {
-    const found = evaluations.find(
-      (e) => e.option_id === optionId && e.criterion_id === criterionId
-    )
-    return found ? found.score : '-'
+  const handleChange = (optId, critId, value) => {
+    setEvaluations((prev) => ({
+      ...prev,
+      [optId]: {
+        ...prev[optId],
+        [critId]: value,
+      },
+    }))
   }
 
-  const calculateTotalScore = (optionId) => {
+  const calculateScore = (optId) => {
+    const scores = evaluations[optId]
     let total = 0
-    let totalWeight = 0
+    let weightSum = 0
 
-    criteria.forEach((crit) => {
-      const score = getScore(optionId, crit.id)
-      if (score !== '-' && !isNaN(score)) {
-        total += score * crit.weight
-        totalWeight += crit.weight
-      }
-    })
-
-    return totalWeight > 0 ? (total / totalWeight).toFixed(2) : '-'
-  }
-
-  const exportToPDF = () => {
-    const doc = new jsPDF()
-    doc.setFontSize(16)
-    doc.text(`Entscheidung: ${decision.name}`, 14, 20)
-
-    const tableHead = [
-      ['Option', ...criteria.map((c) => c.name), 'Gesamtscore']
-    ]
-
-    const tableBody = options.map((opt) => {
-      const row = [opt.name]
-      criteria.forEach((crit) => {
-        row.push(getScore(opt.id, crit.id))
-      })
-      row.push(calculateTotalScore(opt.id))
-      return row
-    })
-
-    autoTable(doc, {
-      head: tableHead,
-      body: tableBody,
-      startY: 30,
-    })
-
-    doc.save(`Entscheidung_${decision.name}.pdf`)
-  }
-
-  const exportToCSV = () => {
-    const headers = ['Option', ...criteria.map(c => c.name), 'Gesamtscore']
-    const rows = options.map(opt => {
-      const row = [opt.name]
-      criteria.forEach(crit => {
-        row.push(getScore(opt.id, crit.id))
-      })
-      row.push(calculateTotalScore(opt.id))
-      return row
-    })
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.join(',')),
-    ].join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', `Entscheidung_${decision.name}.csv`)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
-
-  const handleDelete = async () => {
-    if (confirm('Möchtest du diese Entscheidung wirklich löschen?')) {
-      try {
-        await deleteDecision(decision.id)
-        alert('✅ Entscheidung gelöscht.')
-        navigate('/history') // zurück zur Übersicht
-      } catch (error) {
-        console.error(error)
-        alert('❌ Fehler beim Löschen!')
-      }
+    for (const critId in scores) {
+      const crit = criteria.find((c) => c.id === critId)
+      const weight = crit?.weight || 0
+      const value = Number(scores[critId]) || 0
+      total += value * weight
+      weightSum += weight
     }
-  }
 
-  if (loading) return <p className="p-4">⏳ Lädt Entscheidung...</p>
-  if (!decision) return <p className="p-4">❌ Entscheidung nicht gefunden.</p>
+    return weightSum ? Math.round(total / weightSum) : 0
+  }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">🔍 Entscheidung: {decision.name}</h2>
-        <div className="space-x-4 text-sm">
-          <Link to={`/decision/${id}/edit`} className="text-blue-600 underline">
-            ✏️ Bearbeiten
-          </Link>
-          <Link to={`/decision/${id}/evaluate`} className="text-green-600 underline">
-            🧮 Bewertung starten
-          </Link>
-          <button
-            onClick={handleDelete}
-            className="text-red-600 underline"
-          >
-            🗑️ Löschen
-          </button>
-        </div>
-      </div>
+    <div className="max-w-4xl mx-auto py-10">
+      <h2 className="text-2xl font-bold mb-4">🔍 Entscheidung: {decision?.name}</h2>
+      <p className="mb-6">{decision?.description}</p>
 
-      <p className="text-sm text-gray-500">
-        Erstellt am: {new Date(decision.created_at).toLocaleString()}
-      </p>
-
-      <div>
-        <h3 className="font-semibold mb-1">✅ Optionen</h3>
-        <ul className="list-disc pl-6">
-          {options.map((opt) => (
-            <li key={opt.id}>{opt.name}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h3 className="font-semibold mb-1">📊 Kriterien (mit Gewichtung)</h3>
-        <ul className="list-disc pl-6">
-          {criteria.map((crit) => (
-            <li key={crit.id}>
-              {crit.name} ({crit.weight}%)
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {evaluations.length > 0 && (
-        <div>
-          <h3 className="font-semibold mt-6 mb-2">🧮 Bewertungsmatrix</h3>
-
-          <table className="w-full border text-sm">
-            <thead>
-              <tr>
-                <th className="border px-3 py-2 text-left bg-gray-100">Option</th>
-                {criteria.map((crit) => (
-                  <th key={crit.id} className="border px-3 py-2 text-left bg-gray-100">
-                    {crit.name}
-                  </th>
-                ))}
-                <th className="border px-3 py-2 text-left bg-gray-100">⏱️ Gesamtscore</th>
-              </tr>
-            </thead>
-            <tbody>
-              {options.map((opt) => (
-                <tr key={opt.id}>
-                  <td className="border px-3 py-2 font-medium bg-gray-50">{opt.name}</td>
-                  {criteria.map((crit) => (
-                    <td key={crit.id} className="border px-3 py-2">
-                      {getScore(opt.id, crit.id)}
-                    </td>
-                  ))}
-                  <td className="border px-3 py-2 font-bold bg-blue-50">
-                    {calculateTotalScore(opt.id)}
-                  </td>
-                </tr>
+      <div className="overflow-x-auto">
+        <table className="min-w-full border">
+          <thead>
+            <tr>
+              <th className="border p-2">Option</th>
+              {criteria.map((c) => (
+                <th key={c.id} className="border p-2">
+                  {c.name} ({c.weight})
+                </th>
               ))}
-            </tbody>
-          </table>
+              <th className="border p-2">Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            {options.map((opt) => (
+              <tr key={opt.id}>
+                <td className="border p-2 font-semibold">{opt.name}</td>
+                {criteria.map((crit) => (
+                  <td key={crit.id} className="border p-2">
+                    <input
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={evaluations[opt.id]?.[crit.id] || ''}
+                      onChange={(e) =>
+                        handleChange(opt.id, crit.id, e.target.value)
+                      }
+                      className="w-16 px-2 py-1 border rounded"
+                    />
+                  </td>
+                ))}
+                <td className="border p-2 font-bold text-center">
+                  {calculateScore(opt.id)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-          <div className="flex gap-4 mt-4">
-            <button
-              onClick={exportToPDF}
-              className="bg-red-600 text-white px-4 py-2 rounded"
-            >
-              📄 Als PDF exportieren
-            </button>
-            <button
-              onClick={exportToCSV}
-              className="bg-green-600 text-white px-4 py-2 rounded"
-            >
-              📊 Als CSV exportieren
-            </button>
-          </div>
-        </div>
-      )}
+      {message && <p className="text-center mt-4 text-red-600">{message}</p>}
     </div>
   )
 }

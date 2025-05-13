@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 
 function Dashboard() {
   const { user } = useAuthStore()
-  const [decisions, setDecisions] = useState([])
+  const [allDecisions, setAllDecisions] = useState([])
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -14,26 +14,24 @@ function Dashboard() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      try {
-        const res = await fetch('http://localhost:3000/api/decisions', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
+      const res = await fetch('http://localhost:3000/api/decision', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
 
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Error fetching decisions')
-
-        setDecisions(data)
-      } catch (err) {
-        console.error('Error loading decisions:', err.message)
+      const data = await res.json()
+      if (res.ok) {
+        setAllDecisions(data)
+      } else {
+        console.error('Fehler beim Laden:', data.message)
       }
     }
 
     fetchData()
   }, [])
 
-  const filtered = decisions.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = allDecisions.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="fixed inset-0 bg-[#A7D7C5] flex items-center justify-center overflow-hidden">
@@ -66,14 +64,14 @@ function Dashboard() {
             <BarChart2 className="text-[#84C7AE]" />
             <div>
               <p className="text-gray-600 text-sm">Total Decisions</p>
-              <p className="text-xl font-bold text-[#212B27]">{decisions.length}</p>
+              <p className="text-xl font-bold text-[#212B27]">{allDecisions.length}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow px-6 py-5 flex items-center gap-4">
             <Activity className="text-[#84C7AE]" />
             <div>
               <p className="text-gray-600 text-sm">Recently Updated</p>
-              <p className="text-sm text-[#32403B]">{decisions[0]?.name || '—'}</p>
+              <p className="text-sm text-[#32403B]">{allDecisions[0]?.name || '—'}</p>
             </div>
           </div>
           <div className="bg-white rounded-xl shadow px-6 py-5 flex items-center gap-4">
@@ -99,11 +97,14 @@ function Dashboard() {
                 <FileText className="text-[#84C7AE]" />
                 <div>
                   <h3 className="font-bold text-lg text-[#212B27]">{d.name}</h3>
-                  <p className="text-xs text-gray-500">{new Date(d.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">Last edited: {new Date(d.created_at).toLocaleString()}</p>
                 </div>
               </div>
               <p className="text-sm text-gray-700">
-                Best Option: <span className="font-semibold">{d.bestOption || 'N/A'}</span>
+                Description: <span className="font-semibold">{d.description || '—'}</span>
+              </p>
+              <p className="text-sm text-gray-700 mt-1">
+                Mode: <span className="font-semibold">{d.mode}</span>
               </p>
               <Link
                 to={`/decision/${d.id}`}

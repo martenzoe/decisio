@@ -1,10 +1,12 @@
+// src/pages/NewDecision.jsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 function NewDecision() {
   const [decisionName, setDecisionName] = useState('')
-  const [decisionType, setDecisionType] = useState('manual') // "manual" | "ai"
   const [description, setDescription] = useState('')
+  const [mode, setMode] = useState('manual')
+  const [type, setType] = useState('private') // NEU
   const [options, setOptions] = useState([''])
   const [criteria, setCriteria] = useState([{ name: '', weight: '' }])
   const navigate = useNavigate()
@@ -15,22 +17,19 @@ function NewDecision() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
     try {
       const token = localStorage.getItem('token')
       if (!token) throw new Error('⛔ Kein Token gefunden')
 
-      // 1. Entscheidung speichern (mit Typ & Beschreibung)
+      // 1. Entscheidung speichern
       const res = await fetch('http://localhost:3000/api/decision', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: decisionName,
-          type: decisionType,
-          description,
-        }),
+        body: JSON.stringify({ name: decisionName, description, mode, type }), // ✅ type hinzugefügt
       })
 
       const data = await res.json()
@@ -83,44 +82,39 @@ function NewDecision() {
         </div>
 
         <div>
-          <label className="block font-semibold mb-1">Entscheidungstyp</label>
-          <div className="flex gap-4">
-            <label>
-              <input
-                type="radio"
-                name="decisionType"
-                value="manual"
-                checked={decisionType === 'manual'}
-                onChange={() => setDecisionType('manual')}
-              />{' '}
-              Manuell
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="decisionType"
-                value="ai"
-                checked={decisionType === 'ai'}
-                onChange={() => setDecisionType('ai')}
-              />{' '}
-              KI-gestützt
-            </label>
-          </div>
+          <label className="block font-semibold">Beschreibung</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+            rows="3"
+            placeholder="Beschreibe dein Entscheidungsproblem"
+          />
         </div>
 
-        {decisionType === 'ai' && (
-          <div>
-            <label className="block font-semibold">Beschreibung</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Beschreibe die Entscheidung, damit die KI dich unterstützen kann..."
-              className="w-full border px-3 py-2 rounded"
-              rows={4}
-              required
-            />
-          </div>
-        )}
+        <div>
+          <label className="block font-semibold">Modus</label>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="manual">Manuelle Entscheidung</option>
+            <option value="ai">KI-gestützte Entscheidung</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-semibold">Entscheidungstyp</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full border px-3 py-2 rounded"
+          >
+            <option value="private">Privat</option>
+            <option value="public">Öffentlich</option>
+          </select>
+        </div>
 
         <div>
           <label className="block font-semibold">Optionen</label>
