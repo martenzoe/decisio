@@ -17,7 +17,7 @@ function DecisionDetail() {
       const token = localStorage.getItem('token')
       if (!token) return
 
-      const [dRes, oRes, cRes] = await Promise.all([
+      const [dRes, oRes, cRes, eRes] = await Promise.all([
         fetch(`http://localhost:3000/api/decision/${id}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
@@ -27,21 +27,29 @@ function DecisionDetail() {
         fetch(`http://localhost:3000/api/decision/${id}/criteria`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
+        fetch(`http://localhost:3000/api/decision/${id}/evaluations`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
       ])
 
       const decision = await dRes.json()
       const options = await oRes.json()
       const criteria = await cRes.json()
+      const evaluationData = await eRes.json()
 
       setDecision(decision)
       setOptions(options)
       setCriteria(criteria)
 
+      // 🧠 Initialisiere Bewertungen
       const initial = {}
       options.forEach((opt) => {
         initial[opt.id] = {}
         criteria.forEach((crit) => {
-          initial[opt.id][crit.id] = ''
+          const found = evaluationData.find(
+            (ev) => ev.option_id === opt.id && ev.criterion_id === crit.id
+          )
+          initial[opt.id][crit.id] = found ? found.value : ''
         })
       })
       setEvaluations(initial)
@@ -74,6 +82,39 @@ function DecisionDetail() {
     }
 
     return weightSum ? Math.round(total / weightSum) : 0
+  }
+
+  const handleSave = async () => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const payload = []
+    for (const optId in evaluations) {
+      for (const critId in evaluations[optId]) {
+        payload.push({
+          option_id: optId,
+          criterion_id: critId,
+          value: Number(evaluations[optId][critId]) || 0,
+        })
+      }
+    }
+
+    const res = await fetch(`http://localhost:3000/api/decision/${id}/evaluations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ evaluations: payload }),
+    })
+
+    const data = await res.json()
+
+    if (res.ok) {
+      setMessage('✅ Bewertung gespeichert!')
+    } else {
+      setMessage(`❌ Fehler: ${data.error || 'Speichern fehlgeschlagen'}`)
+    }
   }
 
   return (
@@ -119,6 +160,15 @@ function DecisionDetail() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-6 text-center">
+        <button
+          onClick={handleSave}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
+        >
+          💾 Bewertung speichern
+        </button>
       </div>
 
       {message && <p className="text-center mt-4 text-red-600">{message}</p>}
