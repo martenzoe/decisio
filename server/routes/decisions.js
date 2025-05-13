@@ -5,112 +5,112 @@ import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
-// ➕ Neue Entscheidung speichern
+// 🔸 Entscheidung erstellen
 router.post('/', verifyJWT, async (req, res) => {
-  const { name, description, mode, type } = req.body
+  const { name, description, mode = 'manual', type = 'private' } = req.body
   const user_id = req.userId
 
-  console.log('🧾 Neue Entscheidung:', { name, description, mode, type })
-  console.log('👤 Benutzer-ID:', user_id)
+  try {
+    const { data, error } = await supabase
+      .from('decisions')
+      .insert([{ name, description, mode, type, user_id }])
+      .select()
+      .single()
 
-  if (!name) return res.status(400).json({ error: 'Name is required' })
-
-  const { data, error } = await supabase
-    .from('decisions')
-    .insert([{ name, description, mode, type, user_id }])
-    .select()
-    .single()
-
-  if (error) {
-    console.error('❌ Supabase-Fehler beim Speichern der Entscheidung:', error.message)
-    return res.status(500).json({ error: error.message })
+    if (error) throw error
+    res.status(201).json(data)
+  } catch (err) {
+    console.error('❌ Fehler beim Erstellen der Entscheidung:', err.message)
+    res.status(500).json({ error: err.message })
   }
-
-  res.json(data)
 })
 
-// 📥 Optionen speichern
+// 🔸 Optionen hinzufügen
 router.post('/:id/options', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
   const { options } = req.body
-  const decision_id = req.params.id
 
-  if (!Array.isArray(options)) {
-    return res.status(400).json({ error: 'Options must be an array' })
+  try {
+    const inserts = options.map(name => ({ name, decision_id }))
+    const { error } = await supabase.from('options').insert(inserts)
+    if (error) throw error
+    res.json({ message: 'Optionen gespeichert' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-
-  const inserts = options.map((name) => ({ name, decision_id }))
-  const { error } = await supabase.from('options').insert(inserts)
-
-  if (error) {
-    console.error('❌ Supabase-Fehler beim Speichern der Optionen:', error.message)
-    return res.status(500).json({ error: error.message })
-  }
-
-  res.json({ message: 'Options saved' })
 })
 
-// 📥 Kriterien speichern
+// 🔸 Kriterien hinzufügen
 router.post('/:id/criteria', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
   const { criteria } = req.body
-  const decision_id = req.params.id
 
-  if (!Array.isArray(criteria)) {
-    return res.status(400).json({ error: 'Criteria must be an array' })
+  try {
+    const inserts = criteria.map(c => ({
+      name: c.name,
+      importance: Number(c.importance),
+      decision_id,
+    }))
+    const { error } = await supabase.from('criteria').insert(inserts)
+    if (error) throw error
+    res.json({ message: 'Kriterien gespeichert' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-
-  const inserts = criteria.map((c) => ({
-    name: c.name,
-    weight: Number(c.weight),
-    decision_id,
-  }))
-
-  const { error } = await supabase.from('criteria').insert(inserts)
-
-  if (error) {
-    console.error('❌ Supabase-Fehler beim Speichern der Kriterien:', error.message)
-    return res.status(500).json({ error: error.message })
-  }
-
-  res.json({ message: 'Criteria saved' })
 })
 
-// 📤 Alle Entscheidungen des Users abrufen
-router.get('/', verifyJWT, async (req, res) => {
-  const user_id = req.userId
-  console.log('🔍 Abfrage für user_id:', user_id)
+// 🔸 Bewertungen (Evaluations) speichern
+router.post('/:id/evaluations', verifyJWT, async (req, res) => {
+  const { evaluations } = req.body
 
-  const { data, error } = await supabase
-    .from('decisions')
-    .select('*')
-    .eq('user_id', user_id)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error('❌ Supabase-Fehler beim Abrufen der Entscheidungen:', error.message)
-    return res.status(500).json({ error: error.message })
+  try {
+    const inserts = evaluations.map(e => ({
+      option_id: e.option_id,
+      criterion_id: e.criterion_id,
+      score: Number(e.score),
+    }))
+    const { error } = await supabase.from('evaluations').insert(inserts)
+    if (error) throw error
+    res.json({ message: 'Bewertungen gespeichert' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-
-  res.json(data)
 })
 
-// 🔍 Einzelne Entscheidung abrufen
-router.get('/:id', verifyJWT, async (req, res) => {
+// 🔸 Entscheidung + Optionen + Kriterien + Bewertungen abrufen
+router.get('/:id/details', verifyJWT, async (req, res) => {
   const user_id = req.userId
   const decision_id = req.params.id
 
-  const { data, error } = await supabase
-    .from('decisions')
-    .select('*')
-    .eq('id', decision_id)
-    .eq('user_id', user_id)
-    .single()
+  try {
+    const { data: decision, error: err1 } = await supabase
+      .from('decisions')
+      .select('*')
+      .eq('id', decision_id)
+      .eq('user_id', user_id)
+      .single()
 
-  if (error) {
-    console.error('❌ Supabase-Fehler beim Abrufen einer einzelnen Entscheidung:', error.message)
-    return res.status(500).json({ error: error.message })
+    if (err1) throw err1
+
+    const { data: options } = await supabase
+      .from('options')
+      .select('*')
+      .eq('decision_id', decision_id)
+
+    const { data: criteria } = await supabase
+      .from('criteria')
+      .select('*')
+      .eq('decision_id', decision_id)
+
+    const { data: evaluations } = await supabase
+      .from('evaluations')
+      .select('*')
+      .in('option_id', options.map(o => o.id))
+
+    res.json({ decision, options, criteria, evaluations })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
   }
-
-  res.json(data)
 })
 
 export default router
