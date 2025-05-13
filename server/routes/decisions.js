@@ -59,23 +59,6 @@ router.post('/:id/criteria', verifyJWT, async (req, res) => {
   }
 })
 
-// 🔸 Bewertungen (Evaluations) speichern
-router.post('/:id/evaluations', verifyJWT, async (req, res) => {
-  const { evaluations } = req.body
-
-  try {
-    const inserts = evaluations.map(e => ({
-      option_id: e.option_id,
-      criterion_id: e.criterion_id,
-      score: Number(e.score),
-    }))
-    const { error } = await supabase.from('evaluations').insert(inserts)
-    if (error) throw error
-    res.json({ message: 'Bewertungen gespeichert' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
 
 // 🔸 Entscheidung + Optionen + Kriterien + Bewertungen abrufen
 router.get('/:id/details', verifyJWT, async (req, res) => {
@@ -112,5 +95,62 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+// 🧾 Optionen abrufen
+router.get('/:id/options', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const { data, error } = await supabase
+    .from('options')
+    .select('*')
+    .eq('decision_id', decision_id)
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  res.json(data)
+})
+
+// 🧾 Kriterien abrufen
+router.get('/:id/criteria', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const { data, error } = await supabase
+    .from('criteria')
+    .select('*')
+    .eq('decision_id', decision_id)
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  res.json(data)
+})
+
+// 📝 Bewertungen speichern
+router.post('/:id/evaluations', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const { evaluations } = req.body
+
+  if (!evaluations || !Array.isArray(evaluations)) {
+    return res.status(400).json({ error: 'Evaluations must be an array' })
+  }
+
+  // Bestehende löschen (Clean Slate Prinzip)
+  await supabase
+    .from('evaluations')
+    .delete()
+    .eq('decision_id', decision_id)
+
+  // Einfügen der neuen Bewertungen
+  const inserts = evaluations.map((ev) => ({
+    decision_id,
+    option_id: ev.option_id,
+    criterion_id: ev.criterion_id,
+    value: Number(ev.value),
+  }))
+
+  const { error } = await supabase.from('evaluations').insert(inserts)
+
+  if (error) return res.status(500).json({ error: error.message })
+
+  res.json({ message: '✅ Bewertungen gespeichert' })
+})
+
 
 export default router
