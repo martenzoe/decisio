@@ -151,10 +151,10 @@ router.post('/:id/criteria', verifyJWT, async (req, res) => {
   res.json({ message: 'Kriterien gespeichert' })
 })
 
-// ✅ Bewertungen speichern
+// ✅ Bewertungen speichern inkl. Erklärung (GPT)
 router.post('/:id/evaluations', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
-  const { evaluations } = req.body
+  const { evaluations, options, criteria } = req.body
 
   try {
     const { data: dbOptions } = await supabase
@@ -169,14 +169,13 @@ router.post('/:id/evaluations', verifyJWT, async (req, res) => {
 
     await supabase.from('evaluations').delete().eq('decision_id', decision_id)
 
-    const inserts = evaluations
-      .map(ev => ({
-        decision_id,
-        option_id: dbOptions[ev.option_index]?.id,
-        criterion_id: dbCriteria[ev.criterion_index]?.id,
-        value: ev.value,
-      }))
-      .filter(e => e.option_id && e.criterion_id)
+    const inserts = evaluations.map(ev => ({
+      decision_id,
+      option_id: dbOptions[ev.option_index]?.id,
+      criterion_id: dbCriteria[ev.criterion_index]?.id,
+      value: ev.value,
+      explanation: ev.explanation || null // 🆕 GPT-Erklärung, falls vorhanden
+    })).filter(e => e.option_id && e.criterion_id)
 
     const { error } = await supabase.from('evaluations').insert(inserts)
     if (error) throw error
@@ -186,6 +185,8 @@ router.post('/:id/evaluations', verifyJWT, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
+
+
 
 // 📥 Kommentar speichern
 router.post('/:id/comments', verifyJWT, async (req, res) => {

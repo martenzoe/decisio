@@ -5,6 +5,7 @@ import dotenv from 'dotenv'
 import authRoutes from './routes/auth.js'
 import decisionRoutes from './routes/decisions.js'
 import userRoutes from './routes/users.js'
+import aiRoutes from './routes/ai.js' // ✅ NEU
 
 dotenv.config()
 
@@ -15,8 +16,9 @@ app.use(cors())
 app.use(express.json())
 
 app.use('/api', authRoutes)
-app.use('/api/decision', decisionRoutes) // ✅ Wichtig: Das darf NICHT fehlen!
+app.use('/api/decision', decisionRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/ai', aiRoutes) // ✅ NEU
 
 app.get('/', (req, res) => {
   res.send('🚀 API is running...')
