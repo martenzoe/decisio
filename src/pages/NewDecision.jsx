@@ -12,6 +12,7 @@ function NewDecision() {
   const [criteria, setCriteria] = useState([{ name: '', importance: '' }])
   const [evaluations, setEvaluations] = useState({})
   const [gptFinished, setGptFinished] = useState(false)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   const updateEvaluations = (opts, crits) => {
@@ -53,6 +54,7 @@ function NewDecision() {
       return alert('⚠️ Bitte alle Felder ausfüllen.')
     }
 
+    setLoading(true)
     try {
       const gptResult = await getGPTRecommendation({ decisionName, description, options, criteria })
       const newEvaluations = {}
@@ -73,6 +75,8 @@ function NewDecision() {
     } catch (err) {
       console.error('❌ GPT Fehler:', err.message)
       alert('❌ Fehler bei GPT-Empfehlung')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -80,6 +84,8 @@ function NewDecision() {
     e.preventDefault()
     const token = localStorage.getItem('token')
     if (!token) return alert('⛔ Kein Token gefunden')
+
+    setLoading(true)
 
     try {
       const res = await fetch('http://localhost:3000/api/decision', {
@@ -157,11 +163,24 @@ function NewDecision() {
     } catch (err) {
       console.error('❌ Fehler beim Speichern:', err.message)
       alert(`❌ Fehler beim Speichern: ${err.message}`)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto py-10">
+    <div className="relative space-y-6 max-w-2xl mx-auto py-10">
+     {loading && (
+      <div className="absolute inset-0 backdrop-blur-sm bg-transparent flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center">
+          <p className="text-gray-800 font-medium text-sm animate-pulse">
+            ⏳ Die KI analysiert gerade deine Optionen ...
+          </p>
+        </div>
+      </div>
+)}
+
+
       <h2 className="text-2xl font-bold">➕ Neue Entscheidung erstellen</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <input type="text" placeholder="Titel" value={decisionName} onChange={e => setDecisionName(e.target.value)} className="w-full border px-3 py-2 rounded" required />
@@ -215,7 +234,12 @@ function NewDecision() {
             <div className="text-sm text-gray-700 bg-yellow-100 p-4 rounded">
               Die KI bewertet deine Optionen, sobald du auf <strong>„Score berechnen“</strong> klickst.
             </div>
-            <button type="button" onClick={handleGPTRecommendation} className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+            <button
+              type="button"
+              onClick={handleGPTRecommendation}
+              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+              disabled={loading}
+            >
               🤖 Score berechnen
             </button>
           </>
@@ -255,7 +279,7 @@ function NewDecision() {
                 </tbody>
               </table>
             </div>
-            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded" disabled={loading}>
               Entscheidung speichern
             </button>
           </>
