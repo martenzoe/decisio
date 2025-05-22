@@ -12,24 +12,21 @@ function Login() {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    setMessage('⏳ Login läuft...')
+    setMessage('⏳ Logging in...')
 
     try {
       const res = await fetch('http://localhost:3000/api/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
 
       const data = await res.json()
-
-      if (!res.ok) throw new Error(data.error || 'Login fehlgeschlagen')
+      if (!res.ok) throw new Error(data.error || 'Login failed')
 
       localStorage.setItem('token', data.token)
       setUser({ email })
-      setMessage('✅ Login erfolgreich!')
+      setMessage('✅ Login successful!')
       navigate('/dashboard')
     } catch (err) {
       console.error(err)
@@ -38,42 +35,60 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#A7D7C5]">
-      <div className="bg-white p-10 rounded-lg shadow-md w-full max-w-md space-y-6">
-        <h2 className="text-2xl font-bold text-center text-[#212B27]">Login</h2>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            type="email"
-            placeholder="E-Mail"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Passwort"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            required
-          />
-          <button
-            type="submit"
-            className="w-full bg-[#84C7AE] hover:bg-[#6DB99F] text-white py-2 rounded font-semibold"
-          >
-            Login
-          </button>
-        </form>
+    <div className="min-h-screen bg-white relative">
+      {/* Top Purple Background */}
+      <div className="absolute top-0 left-0 w-full h-1/2 bg-[#4F46E5] z-0" />
 
-        {message && <p className="text-center text-sm text-gray-700">{message}</p>}
+      {/* Centered Login Card */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-gray-800">Welcome back</h1>
+            <p className="text-sm text-gray-500">Sign in to your account</p>
+          </div>
 
-        <p className="text-sm text-center text-[#32403B]">
-          Noch kein Konto?{' '}
-          <Link to="/register" className="text-[#32403B] underline font-semibold">
-            Jetzt registrieren
-          </Link>
-        </p>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                placeholder="mail@example.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4F46E5]"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-[#4F46E5] text-white py-2 rounded-lg font-semibold hover:bg-[#4338CA] transition"
+            >
+              Sign in
+            </button>
+          </form>
+
+          {message && <p className="text-sm text-center text-gray-600">{message}</p>}
+
+          <p className="text-sm text-center text-gray-500">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-[#4F46E5] font-semibold hover:underline">
+              Register now
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )
