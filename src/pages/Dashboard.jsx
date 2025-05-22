@@ -47,7 +47,7 @@ function Dashboard() {
   }, [searchTerm, filter, decisions])
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Wirklich löschen?')) return
+    if (!window.confirm('Are you sure you want to delete this decision?')) return
     const token = localStorage.getItem('token')
     await fetch(`http://localhost:3000/api/decision/${id}`, {
       method: 'DELETE',
@@ -57,56 +57,98 @@ function Dashboard() {
   }
 
   return (
-    <div className="bg-[#A7D7C5] min-h-screen">
-      <div className="py-10 px-4">
-        <div className="bg-white p-6 rounded-2xl shadow-md max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold">📊 Deine Entscheidungen</h2>
+    <div className="min-h-screen bg-white relative">
+      {/* Header Background */}
+      <div className="absolute top-0 left-0 w-full h-64 bg-[#4F46E5] z-0" />
+
+      <div className="relative z-10 py-12 px-4 max-w-7xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800">📊 Your decisions</h2>
+              <p className="text-sm text-gray-500">
+                You have created <strong>{filtered.length}</strong> decisions.
+              </p>
+            </div>
             <button
               onClick={() => navigate('/new-decision')}
-              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+              className="bg-[#4F46E5] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#4338CA] transition"
             >
-              ➕ Neue Entscheidung
+              ➕ New Decision
             </button>
           </div>
 
-          <div className="mb-4 flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <input
               type="text"
-              placeholder="🔍 Suche nach Titel..."
+              placeholder="🔍 Search by title..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="p-2 border rounded w-full sm:w-1/2"
+              className="p-2 border border-gray-300 rounded-md shadow-sm w-full sm:w-1/2"
             />
-            <div className="flex gap-2 mt-2 sm:mt-0">
-              <button onClick={() => setFilter('latest')} className="text-sm bg-gray-200 px-2 py-1 rounded">Neuste</button>
-              <button onClick={() => setFilter('score')} className="text-sm bg-gray-200 px-2 py-1 rounded">Höchster Score</button>
-              <button onClick={() => setFilter('manual')} className="text-sm bg-gray-200 px-2 py-1 rounded">Manuell</button>
-              <button onClick={() => setFilter('ai')} className="text-sm bg-gray-200 px-2 py-1 rounded">KI</button>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'latest', label: 'Newest' },
+                { key: 'score', label: 'Highest Score' },
+                { key: 'manual', label: 'Manual' },
+                { key: 'ai', label: 'AI' },
+              ].map(btn => (
+                <button
+                  key={btn.key}
+                  onClick={() => setFilter(btn.key)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium border ${
+                    filter === btn.key
+                      ? 'bg-[#4F46E5] text-white'
+                      : 'bg-white text-gray-700 border-gray-300'
+                  }`}
+                >
+                  {btn.label}
+                </button>
+              ))}
             </div>
-          </div>
-
-          <div className="mb-6 text-sm text-gray-600">
-            Du hast insgesamt <strong>{filtered.length}</strong> Entscheidungen getroffen.
           </div>
 
           <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((d) => (
-              <div key={d.id} className="bg-green-100 rounded-xl p-4 shadow">
-                <h3 className="font-semibold text-lg">{d.name}</h3>
-                <p className="text-sm text-gray-700">{d.description}</p>
-                <p className="text-sm mt-2">Modus: {d.mode === 'manual' ? '🧠 Manuell' : '🤖 KI'}</p>
-                {d.score && (
-                  <p className="text-sm font-bold text-right text-green-800">Score: {d.score}</p>
-                )}
-                <p className="text-xs text-gray-500 mt-2">
-                  Erstellt: {new Date(d.created_at).toLocaleDateString()}<br />
-                  Geändert: {new Date(d.updated_at).toLocaleDateString()}
-                </p>
-                <div className="flex gap-2 mt-4">
-                  <button onClick={() => navigate(`/decision/${d.id}`)} className="text-blue-600 underline">Details</button>
-                  <button onClick={() => navigate(`/decision/${d.id}/edit`)} className="text-yellow-600 underline">Bearbeiten</button>
-                  <button onClick={() => handleDelete(d.id)} className="text-red-600 underline">Löschen</button>
+              <div
+                key={d.id}
+                className="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="font-semibold text-lg text-gray-800">{d.name}</h3>
+                  <p className="text-sm text-gray-600 mt-1">{d.description}</p>
+                  <p className="text-sm mt-2 text-gray-500">
+                    Mode: {d.mode === 'manual' ? '🧠 Manual' : '🤖 AI'}
+                  </p>
+                  {d.score && (
+                    <p className="text-sm font-semibold text-right text-green-700 mt-1">
+                      Score: {d.score}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-3">
+                    Created: {new Date(d.created_at).toLocaleDateString()}<br />
+                    Updated: {new Date(d.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex gap-3 mt-4 text-sm">
+                  <button
+                    onClick={() => navigate(`/decision/${d.id}`)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Details
+                  </button>
+                  <button
+                    onClick={() => navigate(`/decision/${d.id}/edit`)}
+                    className="text-yellow-600 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d.id)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}
