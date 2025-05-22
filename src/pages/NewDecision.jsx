@@ -51,7 +51,7 @@ function NewDecision() {
 
   const handleGPTRecommendation = async () => {
     if (!decisionName || !description || options.some(o => !o) || criteria.some(c => !c.name || !c.importance)) {
-      return alert('⚠️ Bitte alle Felder ausfüllen.')
+      return alert('⚠️ Please fill in all fields.')
     }
 
     setLoading(true)
@@ -71,10 +71,10 @@ function NewDecision() {
 
       setEvaluations(newEvaluations)
       setGptFinished(true)
-      alert('✅ GPT-Empfehlungen übernommen.')
+      alert('✅ GPT recommendations applied.')
     } catch (err) {
-      console.error('❌ GPT Fehler:', err.message)
-      alert('❌ Fehler bei GPT-Empfehlung')
+      console.error('❌ GPT error:', err.message)
+      alert('❌ GPT evaluation failed.')
     } finally {
       setLoading(false)
     }
@@ -83,7 +83,7 @@ function NewDecision() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     const token = localStorage.getItem('token')
-    if (!token) return alert('⛔ Kein Token gefunden')
+    if (!token) return alert('⛔ Token not found')
 
     setLoading(true)
 
@@ -97,7 +97,7 @@ function NewDecision() {
         body: JSON.stringify({ name: decisionName, description, mode, type })
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler bei Entscheidung')
+      if (!res.ok) throw new Error(data.error || 'Failed to save decision')
 
       const decisionId = data.id
 
@@ -110,7 +110,7 @@ function NewDecision() {
         body: JSON.stringify({ options })
       })
       const dataOpt = await resOpt.json()
-      if (!resOpt.ok) throw new Error(dataOpt.error || 'Fehler bei Optionen')
+      if (!resOpt.ok) throw new Error(dataOpt.error || 'Failed to save options')
 
       const formattedCriteria = criteria.map(c => ({
         name: c.name,
@@ -126,7 +126,7 @@ function NewDecision() {
         body: JSON.stringify({ criteria: formattedCriteria })
       })
       const dataCrit = await resCrit.json()
-      if (!resCrit.ok) throw new Error(dataCrit.error || 'Fehler bei Kriterien')
+      if (!resCrit.ok) throw new Error(dataCrit.error || 'Failed to save criteria')
 
       const evaluationsArray = []
       options.forEach((_, optIdx) => {
@@ -157,134 +157,125 @@ function NewDecision() {
         })
       })
       const dataEval = await resEval.json()
-      if (!resEval.ok) throw new Error(dataEval.error || 'Fehler bei Bewertungen')
+      if (!resEval.ok) throw new Error(dataEval.error || 'Failed to save evaluations')
 
       navigate(`/decision/${decisionId}`)
     } catch (err) {
-      console.error('❌ Fehler beim Speichern:', err.message)
-      alert(`❌ Fehler beim Speichern: ${err.message}`)
+      console.error('❌ Save error:', err.message)
+      alert(`❌ Save error: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="relative space-y-6 max-w-2xl mx-auto py-10">
-     {loading && (
-      <div className="absolute inset-0 backdrop-blur-sm bg-transparent flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm w-full text-center">
-          <p className="text-gray-800 font-medium text-sm animate-pulse">
-            ⏳ Die KI analysiert gerade deine Optionen ...
-          </p>
+    <div className="relative max-w-4xl mx-auto py-12 px-4">
+      {loading && (
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-sm text-center">
+            <p className="text-gray-800 dark:text-gray-100 text-sm animate-pulse">
+              ⏳ GPT is evaluating your inputs...
+            </p>
+          </div>
         </div>
-      </div>
-)}
+      )}
 
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md p-8 space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">➕ Create New Decision</h2>
 
-      <h2 className="text-2xl font-bold">➕ Neue Entscheidung erstellen</h2>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input type="text" placeholder="Titel" value={decisionName} onChange={e => setDecisionName(e.target.value)} className="w-full border px-3 py-2 rounded" required />
-        <textarea placeholder="Beschreibung" value={description} onChange={e => setDescription(e.target.value)} className="w-full border px-3 py-2 rounded" rows="3" />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <input type="text" placeholder="Decision title" value={decisionName} onChange={e => setDecisionName(e.target.value)} className="w-full border px-4 py-2 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white" required />
+          <textarea placeholder="Describe your decision..." value={description} onChange={e => setDescription(e.target.value)} className="w-full border px-4 py-2 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white" rows="3" />
 
-        <select value={mode} onChange={e => setMode(e.target.value)} className="w-full border px-3 py-2 rounded">
-          <option value="manual">Manuell</option>
-          <option value="ai">KI</option>
-        </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select value={mode} onChange={e => setMode(e.target.value)} className="w-full border px-4 py-2 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+              <option value="manual">Manual</option>
+              <option value="ai">AI</option>
+            </select>
+            <select value={type} onChange={e => setType(e.target.value)} className="w-full border px-4 py-2 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
+              <option value="private">Private</option>
+              <option value="public">Public</option>
+            </select>
+          </div>
 
-        <select value={type} onChange={e => setType(e.target.value)} className="w-full border px-3 py-2 rounded">
-          <option value="private">Privat</option>
-          <option value="public">Öffentlich</option>
-        </select>
+          <div>
+            <label className="block font-semibold text-gray-800 dark:text-white mb-1">Options</label>
+            {options.map((opt, i) => (
+              <input key={i} type="text" value={opt} onChange={(e) => {
+                const newOptions = [...options]
+                newOptions[i] = e.target.value
+                setOptions(newOptions)
+                updateEvaluations(newOptions, criteria)
+              }} className="w-full border px-4 py-2 rounded mb-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-white" required />
+            ))}
+            <button type="button" onClick={handleAddOption} className="text-sm text-blue-600 hover:underline">➕ Add Option</button>
+          </div>
 
-        <div>
-          <label className="font-semibold">Optionen</label>
-          {options.map((opt, i) => (
-            <input key={i} type="text" value={opt} onChange={(e) => {
-              const newOptions = [...options]
-              newOptions[i] = e.target.value
-              setOptions(newOptions)
-              updateEvaluations(newOptions, criteria)
-            }} className="w-full border px-3 py-2 rounded mb-2" required />
-          ))}
-          <button type="button" onClick={handleAddOption} className="text-blue-600 underline">➕ Weitere Option</button>
-        </div>
+          <div>
+            <label className="block font-semibold text-gray-800 dark:text-white mb-1">Criteria (importance in %)</label>
+            {criteria.map((crit, i) => (
+              <div key={i} className="flex gap-2 mb-2">
+                <input type="text" value={crit.name} onChange={e => {
+                  const newCrit = [...criteria]
+                  newCrit[i].name = e.target.value
+                  setCriteria(newCrit)
+                  updateEvaluations(options, newCrit)
+                }} className="flex-1 border px-3 py-2 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white" required />
+                <input type="number" value={crit.importance} onChange={e => {
+                  const newCrit = [...criteria]
+                  newCrit[i].importance = e.target.value
+                  setCriteria(newCrit)
+                }} className="w-20 border px-3 py-2 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white" required />
+              </div>
+            ))}
+            <button type="button" onClick={handleAddCriterion} className="text-sm text-blue-600 hover:underline">➕ Add Criterion</button>
+          </div>
 
-        <div>
-          <label className="font-semibold">Kriterien (mit Gewichtung %)</label>
-          {criteria.map((crit, i) => (
-            <div key={i} className="flex gap-2 mb-2">
-              <input type="text" value={crit.name} onChange={e => {
-                const newCrit = [...criteria]
-                newCrit[i].name = e.target.value
-                setCriteria(newCrit)
-                updateEvaluations(options, newCrit)
-              }} className="flex-1 border px-3 py-2 rounded" required />
-              <input type="number" value={crit.importance} onChange={e => {
-                const newCrit = [...criteria]
-                newCrit[i].importance = e.target.value
-                setCriteria(newCrit)
-              }} className="w-20 border px-3 py-2 rounded" required />
-            </div>
-          ))}
-          <button type="button" onClick={handleAddCriterion} className="text-blue-600 underline">➕ Weiteres Kriterium</button>
-        </div>
+          {mode === 'ai' && !gptFinished && (
+            <>
+              <div className="text-sm text-yellow-800 bg-yellow-100 dark:bg-yellow-200 dark:text-yellow-900 p-4 rounded">
+                GPT will analyze your inputs and suggest a scoring.
+              </div>
+              <button type="button" onClick={handleGPTRecommendation} className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition">
+                🤖 Generate Score
+              </button>
+            </>
+          )}
 
-        {mode === 'ai' && !gptFinished && (
-          <>
-            <div className="text-sm text-gray-700 bg-yellow-100 p-4 rounded">
-              Die KI bewertet deine Optionen, sobald du auf <strong>„Score berechnen“</strong> klickst.
-            </div>
-            <button
-              type="button"
-              onClick={handleGPTRecommendation}
-              className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-              disabled={loading}
-            >
-              🤖 Score berechnen
-            </button>
-          </>
-        )}
-
-        {(mode === 'manual' || gptFinished) && (
-          <>
-            <div>
-              <label className="font-semibold">Bewertungen (1–10 je Option × Kriterium)</label>
-              <table className="min-w-full border mt-2">
-                <thead>
-                  <tr>
-                    <th className="border p-2">Option</th>
-                    {criteria.map((c, ci) => (
-                      <th key={ci} className="border p-2">{c.name}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {options.map((opt, oi) => (
-                    <tr key={oi}>
-                      <td className="border p-2 font-semibold">{opt}</td>
-                      {criteria.map((_, ci) => (
-                        <td key={ci} className="border p-2">
-                          <input
-                            type="number"
-                            min="1"
-                            max="10"
-                            value={evaluations[oi]?.[ci] || ''}
-                            onChange={(e) => handleEvaluationChange(oi, ci, e.target.value)}
-                            className="w-16 px-2 py-1 border rounded"
-                          />
-                        </td>
+          {(mode === 'manual' || gptFinished) && (
+            <>
+              <label className="font-semibold text-gray-800 dark:text-white">Evaluate each option per criterion (1–10)</label>
+              <div className="overflow-auto">
+                <table className="min-w-full border border-gray-300 dark:border-gray-700 text-sm">
+                  <thead className="bg-gray-100 dark:bg-gray-800">
+                    <tr>
+                      <th className="border px-2 py-1 text-left">Option</th>
+                      {criteria.map((c, ci) => (
+                        <th key={ci} className="border px-2 py-1 text-left">{c.name}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded" disabled={loading}>
-              Entscheidung speichern
-            </button>
-          </>
-        )}
-      </form>
+                  </thead>
+                  <tbody>
+                    {options.map((opt, oi) => (
+                      <tr key={oi} className="even:bg-gray-50 dark:even:bg-gray-900">
+                        <td className="border px-2 py-1 font-medium">{opt}</td>
+                        {criteria.map((_, ci) => (
+                          <td key={ci} className="border px-2 py-1">
+                            <input type="number" min="1" max="10" value={evaluations[oi]?.[ci] || ''} onChange={(e) => handleEvaluationChange(oi, ci, e.target.value)} className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-700 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+                💾 Save Decision
+              </button>
+            </>
+          )}
+        </form>
+      </div>
     </div>
   )
 }
