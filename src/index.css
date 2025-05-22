@@ -1,6 +1,6 @@
 @import "tailwindcss";
-
-/* Reset für die volle Breite */
+@custom-variant dark (&:where(.dark, .dark *));
+/* Reset */
 html,
 body,
 #root {
@@ -9,6 +9,8 @@ body,
   width: 100%;
   height: 100%;
 }
+
+/* Basis-Hintergrund – steuerbar über Klasse */
 body {
-  @apply bg-[#A7D7C5];
+  @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
 }
