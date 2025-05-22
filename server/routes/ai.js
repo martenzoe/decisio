@@ -4,6 +4,56 @@ import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * tags:
+ *   name: AI
+ *   description: KI-gestützte Empfehlungen
+ */
+
+/**
+ * @swagger
+ * /api/ai/recommendation:
+ *   post:
+ *     summary: Generiert Empfehlungen basierend auf Entscheidungskriterien
+ *     tags: [AI]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - decisionName
+ *               - description
+ *               - options
+ *               - criteria
+ *             properties:
+ *               decisionName:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               options:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *               criteria:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *     responses:
+ *       200:
+ *         description: Empfehlungen generiert
+ *       500:
+ *         description: Fehler bei der KI-Antwort oder beim Parsing
+ */
+
+
 router.post('/recommendation', verifyJWT, async (req, res) => {
   const { decisionName, description, options, criteria } = req.body
   const apiKey = process.env.OPENAI_API_KEY

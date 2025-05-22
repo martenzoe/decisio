@@ -1,3 +1,4 @@
+// server/routes/auth.js
 import express from 'express'
 import { supabase } from '../db.js'
 import bcrypt from 'bcryptjs'
@@ -6,7 +7,45 @@ import crypto from 'node:crypto'
 
 const router = express.Router()
 
-// 🔐 Registrierung
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentifizierungsrouten
+ */
+
+/**
+ * @swagger
+ * /api/register:
+ *   post:
+ *     summary: Registriert einen neuen Benutzer
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 example: geheim123
+ *     responses:
+ *       201:
+ *         description: Registrierung erfolgreich
+ *       400:
+ *         description: Fehlende E-Mail oder Passwort
+ *       409:
+ *         description: E-Mail bereits registriert
+ *       500:
+ *         description: Interner Serverfehler
+ */
 router.post('/register', async (req, res) => {
   const { email, password } = req.body
 
@@ -15,7 +54,6 @@ router.post('/register', async (req, res) => {
   }
 
   try {
-    // ✅ Existiert E-Mail schon?
     const { data: existingUser, error: existingError } = await supabase
       .from('users')
       .select('id')
@@ -52,7 +90,45 @@ router.post('/register', async (req, res) => {
   }
 })
 
-// 🔑 Login
+/**
+ * @swagger
+ * /api/login:
+ *   post:
+ *     summary: Loggt einen registrierten Benutzer ein und gibt einen JWT zurück
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 example: geheim123
+ *     responses:
+ *       200:
+ *         description: Login erfolgreich (JWT wird zurückgegeben)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Fehlende E-Mail oder Passwort
+ *       401:
+ *         description: Nutzer nicht gefunden oder Passwort falsch
+ *       500:
+ *         description: Interner Serverfehler
+ */
 router.post('/login', async (req, res) => {
   const { email, password } = req.body
 

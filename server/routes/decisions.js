@@ -5,6 +5,47 @@ import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
+/**
+ * @swagger
+ * tags:
+ *   name: Decisions
+ *   description: Entscheidungsmanagement
+ */
+
+/**
+ * @swagger
+ * /api/decision:
+ *   post:
+ *     summary: Erstellt eine neue Entscheidung
+ *     tags: [Decisions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - description
+ *             properties:
+ *               name:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               mode:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Entscheidung erstellt
+ *       500:
+ *         description: Interner Serverfehler
+ */
+
+
 // ✅ Entscheidung erstellen
 router.post('/', verifyJWT, async (req, res) => {
   const { name, description, mode = 'manual', type = 'private' } = req.body
