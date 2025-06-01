@@ -73,7 +73,7 @@ ${criteria.map(c => `- ${c.name}`).join('\n')}
 ### Optionen:
 ${options.map(o => `- ${o}`).join('\n')}
 
-### Format (nur JSON!):
+### Format (nur JSON!)
 {
   "bewertungen": [
     {

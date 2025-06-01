@@ -45,7 +45,6 @@ const router = express.Router()
  *         description: Interner Serverfehler
  */
 
-
 // ✅ Entscheidung erstellen
 router.post('/', verifyJWT, async (req, res) => {
   const { name, description, mode = 'manual', type = 'private' } = req.body
@@ -119,6 +118,26 @@ router.get('/', verifyJWT, async (req, res) => {
       .from('decisions')
       .select('*')
       .eq('user_id', user_id)
+
+    if (error) throw error
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ✅ Einzelne Entscheidung abrufen (ohne Details)
+router.get('/:id', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const user_id = req.userId
+
+  try {
+    const { data, error } = await supabase
+      .from('decisions')
+      .select('*')
+      .eq('id', decision_id)
+      .eq('user_id', user_id)
+      .single()
 
     if (error) throw error
     res.json(data)
@@ -215,7 +234,7 @@ router.post('/:id/evaluations', verifyJWT, async (req, res) => {
       option_id: dbOptions[ev.option_index]?.id,
       criterion_id: dbCriteria[ev.criterion_index]?.id,
       value: ev.value,
-      explanation: ev.explanation || null // 🆕 GPT-Erklärung, falls vorhanden
+      explanation: ev.explanation || null
     })).filter(e => e.option_id && e.criterion_id)
 
     const { error } = await supabase.from('evaluations').insert(inserts)
@@ -226,8 +245,6 @@ router.post('/:id/evaluations', verifyJWT, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-
-
 
 // 📥 Kommentar speichern
 router.post('/:id/comments', verifyJWT, async (req, res) => {
@@ -269,5 +286,4 @@ router.get('/:id/comments', verifyJWT, async (req, res) => {
   }
 })
 
-
-export default router
+export default router;
