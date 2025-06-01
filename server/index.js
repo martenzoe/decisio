@@ -19,25 +19,31 @@ const PORT = process.env.PORT || 3000
 const allowedOrigins = [
   'http://localhost:5173',
   'https://decisiofrontend.vercel.app',
-  'https://decisio-d4p13mjs4-martenzoes-projects.vercel.app',
   'https://decisiofrontend-git-main-martenzoes-projects.vercel.app',
   'https://decisiofrontend-5jdba6sfe-martenzoes-projects.vercel.app',
+  'https://decisio.vercel.app',
   'https://decisio-two.vercel.app',
-  'https://decisio.vercel.app'
+  'https://decisio-git-main-martenzoes-projects.vercel.app' // <— DEIN JETZIGES PROBLEM
 ]
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // erlaubt lokale Tools ohne Origin (z. B. Postman) sowie explizite Freigaben
+const corsOptions = {
+  origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true)
     } else {
-      callback(new Error('⛔ Not allowed by CORS'))
+      console.log('⛔ Blocked by CORS:', origin)
+      callback(new Error('Not allowed by CORS'))
     }
   },
   credentials: true,
-}))
-app.options('*', cors())
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // ← damit OPTIONS erlaubt ist
+  allowedHeaders: ['Content-Type', 'Authorization'], // ← notwendig für Preflight
+}
+
+app.use(cors(corsOptions))
+
+// ⛔️ Wichtig: Diese Zeile MUSS kommen, damit OPTIONS-Anfragen korrekt beantwortet werden!
+app.options('*', cors(corsOptions))
 
 // 🔧 Middleware
 app.use(express.json())
