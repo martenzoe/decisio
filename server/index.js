@@ -19,6 +19,7 @@ const PORT = process.env.PORT || 3000
 const allowedOrigins = [
   'http://localhost:5173',
   'https://decisiofrontend.vercel.app',
+  'https://decisio-d4p13mjs4-martenzoes-projects.vercel.app',
   'https://decisiofrontend-git-main-martenzoes-projects.vercel.app',
   'https://decisiofrontend-5jdba6sfe-martenzoes-projects.vercel.app',
   'https://decisio.vercel.app'
