@@ -15,8 +15,18 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 3000
 
+// ✅ CORS-Konfiguration
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://decisio.vercel.app'
+]
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}))
+
 // 🔧 Middleware
-app.use(cors())
 app.use(express.json())
 
 // ✅ Swagger Setup
@@ -47,15 +57,14 @@ const swaggerOptions = {
   apis: ['./routes/*.js'],
 }
 
-
 const swaggerSpec = swaggerJSDoc(swaggerOptions)
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 // ✅ API-Routen
-app.use('/api', authRoutes)              // 🔐 Registrierung, Login, Logout
-app.use('/api/decision', decisionRoutes) // 📊 Entscheidungen, Optionen, Kriterien, Bewertungen
-app.use('/api/users', userRoutes)        // 👤 Benutzerfunktionen
-app.use('/api/ai', aiRoutes)             // 🤖 GPT-Logik
+app.use('/api', authRoutes)
+app.use('/api/decision', decisionRoutes)
+app.use('/api/users', userRoutes)
+app.use('/api/ai', aiRoutes)
 
 // ✅ Test-Route
 app.get('/', (req, res) => {
