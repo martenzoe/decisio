@@ -9,7 +9,6 @@ import Logout from './components/Logout'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import MainLayout from './layouts/MainLayout'
-import Navbar from './components/Navbar'
 
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
@@ -21,6 +20,8 @@ import EditDecision from './pages/EditDecision'
 import EvaluateDecision from './pages/EvaluateDecision'
 import Faq from './pages/Faq'
 import Kontakt from './pages/Kontakt'
+import Impressum from './pages/Impressum'
+import Datenschutz from './pages/Datenschutz'
 
 function App() {
   const { user, setUser } = useAuthStore()
@@ -33,13 +34,8 @@ function App() {
     }
   }, [setUser])
 
-  const hideNavbar = location.pathname === '/login' || location.pathname === '/register'
-
   return (
     <div className="min-h-screen">
-      {/* Navbar wird im Layout eingebunden – nichts hier rendern */}
-
-
       <Routes>
         <Route
           path="/"
@@ -62,7 +58,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/new-decision"
           element={
@@ -73,7 +68,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/evaluation"
           element={
@@ -84,7 +78,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/history"
           element={
@@ -95,7 +88,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/decision/:id"
           element={
@@ -106,7 +98,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/decision/:id/edit"
           element={
@@ -117,7 +108,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/decision/:id/evaluate"
           element={
@@ -128,7 +118,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
         <Route
           path="/faq"
           element={
@@ -137,12 +126,27 @@ function App() {
             </MainLayout>
           }
         />
-
         <Route
           path="/kontakt"
           element={
             <MainLayout>
               <Kontakt />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/impressum"
+          element={
+            <MainLayout>
+              <Impressum />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/datenschutz"
+          element={
+            <MainLayout>
+              <Datenschutz />
             </MainLayout>
           }
         />

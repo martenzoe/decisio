@@ -42,8 +42,8 @@ function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2">
-          <img src={logo} alt="Decisia Logo" className="h-8" />
-          <span className="text-lg font-bold text-[#4F46E5] dark:text-white">Decisia</span>
+          <img src={logo} alt="Decisia Logo" className="h-11" />
+          <span className="text-lg font-bold text-[#4F46E5] dark:text-white"></span>
         </div>
 
         {/* Navigation */}
