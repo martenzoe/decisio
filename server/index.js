@@ -15,9 +15,10 @@ dotenv.config()
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// ✅ CORS-Konfiguration – lokal + Vercel-URLs erlaubt
+// ✅ Entwicklungsfreundliche CORS-Konfiguration
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:3000',
   'https://decisiofrontend.vercel.app',
   'https://decisio-d4p13mjs4-martenzoes-projects.vercel.app',
   'https://decisiofrontend-git-main-martenzoes-projects.vercel.app',
@@ -28,16 +29,20 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // erlaubt lokale Tools ohne Origin (z. B. Postman) sowie explizite Freigaben
-    if (!origin || allowedOrigins.includes(origin)) {
+    console.log('🔍 Origin:', origin)
+    if (
+      !origin || // z. B. Swagger, Postman, cURL
+      allowedOrigins.includes(origin) ||
+      origin.includes('localhost')
+    ) {
       callback(null, true)
     } else {
+      console.warn(`⛔ Blocked by CORS: ${origin}`)
       callback(new Error('⛔ Not allowed by CORS'))
     }
   },
   credentials: true,
 }))
-
 
 // 🔧 Middleware
 app.use(express.json())
