@@ -1,7 +1,7 @@
-// src/pages/Login.jsx
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
+import { loginUser } from '../api/auth'
 
 function Login() {
   const [email, setEmail] = useState('')
@@ -15,20 +15,10 @@ function Login() {
     setMessage('⏳ Logging in...')
 
     try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // ← Das ist der wichtige Teil!
-      body: JSON.stringify({ email, password }),
-  })
-
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Login failed')
-
+      const data = await loginUser(email, password)
       localStorage.setItem('token', data.token)
       setUser({ email })
-      setMessage('✅ Login successful!')
+      setMessage('✅ Login erfolgreich!')
       navigate('/dashboard')
     } catch (err) {
       console.error(err)
@@ -38,10 +28,7 @@ function Login() {
 
   return (
     <div className="min-h-screen bg-white relative">
-      {/* Top Purple Background */}
       <div className="absolute top-0 left-0 w-full h-1/2 bg-[#4F46E5] z-0" />
-
-      {/* Centered Login Card */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
           <div className="text-center">

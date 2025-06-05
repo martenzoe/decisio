@@ -1,125 +1,227 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/useAuthStore'
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { updateDecision } from '../api/decision';
+import { useAuthStore } from '../store/useAuthStore';
+
 
 function EditDecision() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const token = useAuthStore.getState().token;
 
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [mode, setMode] = useState('manual')
-  const [type, setType] = useState('private')
-  const [error, setError] = useState(null)
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [mode, setMode] = useState('');
+  const [type, setType] = useState('');
+  const [options, setOptions] = useState([]);
+  const [criteria, setCriteria] = useState([]);
+  const [evaluations, setEvaluations] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDecision = async () => {
-      try {
-        const res = await fetch(`http://localhost:3000/api/decision/${id}`, {
-          headers: { Authorization: `Bearer ${user.token}` },
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Failed to load decision')
-        setName(data.name)
-        setDescription(data.description)
-        setMode(data.mode)
-        setType(data.type)
-      } catch (err) {
-        setError(err.message)
-      }
-    }
-
-    fetchDecision()
-  }, [id, user.token])
-
-  const handleUpdate = async (e) => {
-    e.preventDefault()
-    try {
-      const res = await fetch(`http://localhost:3000/api/decision/${id}`, {
-        method: 'PUT',
+      const res = await fetch(`http://localhost:3000/api/decision/${id}/details`, {
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({ name, description, mode, type }),
-      })
+          Authorization: `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) return alert('❌ Fehler beim Laden');
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Update failed')
+      setName(data.decision.name);
+      setDescription(data.decision.description);
+      setMode(data.decision.mode);
+      setType(data.decision.type);
+      setOptions(data.options);
+      setCriteria(data.criteria);
+
+      const grouped = {};
+      data.evaluations.forEach(e => {
+        if (!grouped[e.option_id]) grouped[e.option_id] = {};
+        grouped[e.option_id][e.criterion_id] = {
+          value: e.value,
+          explanation: e.explanation || ''
+        };
+      });
+      setEvaluations(grouped);
+      setLoading(false);
+    };
+
+    fetchDecision();
+  }, [id, token]);
+
+  const handleEvaluationChange = (option_id, criterion_id, field, value) => {
+    setEvaluations(prev => ({
+      ...prev,
+      [option_id]: {
+        ...prev[option_id],
+        [criterion_id]: {
+          ...prev[option_id]?.[criterion_id],
+          [field]: value
+        }
+      }
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const formattedEvaluations = [];
+      for (const option of options) {
+        for (const criterion of criteria) {
+          const evalObj = evaluations[option.id]?.[criterion.id];
+          if (evalObj && evalObj.value) {
+            formattedEvaluations.push({
+              option_index: options.findIndex(o => o.id === option.id),
+              criterion_index: criteria.findIndex(c => c.id === criterion.id),
+              value: Number(evalObj.value),
+              explanation: evalObj.explanation
+            });
+          }
+        }
       }
 
-      navigate(`/decision/${id}`)
+      const updatedOptions = options.map(o => ({ id: o.id, name: o.name }));
+      const updatedCriteria = criteria.map(c => ({
+        id: c.id,
+        name: c.name,
+        importance: Number(c.importance)
+      }));
+
+      await updateDecision(id, token, {
+        name,
+        description,
+        mode,
+        type,
+        options: updatedOptions,
+        criteria: updatedCriteria,
+        evaluations: formattedEvaluations
+      });
+
+      alert('✅ Entscheidung aktualisiert');
+      navigate(`/decision/${id}`);
     } catch (err) {
-      alert(`❌ Error: ${err.message}`)
+      console.error(err);
+      alert('❌ Fehler beim Speichern');
     }
-  }
+  };
+
+  if (loading) return <div className="p-8">⏳ Lädt...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4">
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">✏️ Edit Decision</h2>
+    <div className="max-w-4xl mx-auto p-8">
+      <h2 className="text-2xl font-bold mb-4">✏️ Entscheidung bearbeiten</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          className="w-full p-2 border rounded"
+          placeholder="Titel"
+        />
+        <textarea
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          className="w-full p-2 border rounded"
+          rows="3"
+          placeholder="Beschreibung"
+        />
 
-        {error && <p className="text-red-600">{error}</p>}
+        <div className="grid grid-cols-2 gap-4">
+          <select value={mode} onChange={e => setMode(e.target.value)} className="p-2 border rounded">
+            <option value="manual">Manual</option>
+            <option value="ai">AI</option>
+          </select>
+          <select value={type} onChange={e => setType(e.target.value)} className="p-2 border rounded">
+            <option value="private">Privat</option>
+            <option value="public">Öffentlich</option>
+          </select>
+        </div>
 
-        <form onSubmit={handleUpdate} className="space-y-4">
-          <div>
-            <label className="block font-medium text-gray-800 dark:text-gray-200">Title</label>
+        <div>
+          <h3 className="font-semibold">⚙️ Optionen</h3>
+          {options.map((opt, i) => (
             <input
-              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              required
+              key={opt.id}
+              type="text"
+              value={opt.name}
+              onChange={e => {
+                const updated = [...options];
+                updated[i].name = e.target.value;
+                setOptions(updated);
+              }}
+              className="w-full mb-2 p-2 border rounded"
             />
-          </div>
+          ))}
+        </div>
 
-          <div>
-            <label className="block font-medium text-gray-800 dark:text-gray-200">Description</label>
-            <textarea
-              className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={4}
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="block font-medium text-gray-800 dark:text-gray-200">Mode</label>
-              <select
-                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded"
-                value={mode}
-                onChange={e => setMode(e.target.value)}
-              >
-                <option value="manual">Manual</option>
-                <option value="ai">AI</option>
-              </select>
+        <div>
+          <h3 className="font-semibold">📊 Kriterien</h3>
+          {criteria.map((crit, i) => (
+            <div key={crit.id} className="flex gap-2 mb-2">
+              <input
+                type="text"
+                value={crit.name}
+                onChange={e => {
+                  const updated = [...criteria];
+                  updated[i].name = e.target.value;
+                  setCriteria(updated);
+                }}
+                className="flex-1 p-2 border rounded"
+              />
+              <input
+                type="number"
+                value={crit.importance}
+                onChange={e => {
+                  const updated = [...criteria];
+                  updated[i].importance = e.target.value;
+                  setCriteria(updated);
+                }}
+                className="w-20 p-2 border rounded"
+              />
             </div>
+          ))}
+        </div>
 
-            <div className="flex-1">
-              <label className="block font-medium text-gray-800 dark:text-gray-200">Type</label>
-              <select
-                className="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 rounded"
-                value={type}
-                onChange={e => setType(e.target.value)}
-              >
-                <option value="private">Private</option>
-                <option value="public">Public</option>
-              </select>
-            </div>
-          </div>
+        <div>
+          <h3 className="font-semibold mb-2">🔢 Bewertungen</h3>
+          <table className="min-w-full border">
+            <thead>
+              <tr>
+                <th className="border p-2 text-left">Option</th>
+                {criteria.map(c => (
+                  <th key={c.id} className="border p-2 text-left">{c.name}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {options.map(opt => (
+                <tr key={opt.id}>
+                  <td className="border p-2 font-medium">{opt.name}</td>
+                  {criteria.map(crit => (
+                    <td key={crit.id} className="border p-2">
+                      <input
+                        type="number"
+                        value={evaluations[opt.id]?.[crit.id]?.value || ''}
+                        onChange={e => handleEvaluationChange(opt.id, crit.id, 'value', e.target.value)}
+                        className="w-16 p-1 border rounded"
+                        min="1"
+                        max="10"
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          <button
-            type="submit"
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-          >
-            💾 Save changes
-          </button>
-        </form>
-      </div>
+        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+          💾 Speichern
+        </button>
+      </form>
     </div>
-  )
+  );
 }
 
-export default EditDecision
+export default EditDecision;

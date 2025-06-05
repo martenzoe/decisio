@@ -1,6 +1,6 @@
-// src/components/Register.jsx
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { registerUser } from '../api/auth'
 
 function Register() {
   const [email, setEmail] = useState('')
@@ -13,16 +13,8 @@ function Register() {
     setMessage('⏳ Creating account...')
 
     try {
-      const res = await fetch('http://localhost:3000/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Registration failed')
-
-      setMessage(data.message || '✅ Account created! Redirecting to login...')
+      const data = await registerUser(email, password)
+      setMessage(data.message || '✅ Account erstellt!')
       setTimeout(() => navigate('/login'), 1500)
     } catch (err) {
       console.error(err)
@@ -32,10 +24,7 @@ function Register() {
 
   return (
     <div className="min-h-screen bg-white relative">
-      {/* Top Purple Background */}
       <div className="absolute top-0 left-0 w-full h-1/2 bg-[#4F46E5] z-0" />
-
-      {/* Centered Register Card */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
           <div className="text-center">
