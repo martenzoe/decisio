@@ -23,6 +23,10 @@ import Kontakt from './pages/Kontakt'
 import Impressum from './pages/Impressum'
 import Datenschutz from './pages/Datenschutz'
 
+import Profile from './pages/Profile'
+import ChangePassword from './pages/ChangePassword'
+
+
 function App() {
   const { user, setUser } = useAuthStore()
   const location = useLocation()
@@ -150,7 +154,29 @@ function App() {
             </MainLayout>
           }
         />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <Profile />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/change-password"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ChangePassword />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
+      
     </div>
   )
 }

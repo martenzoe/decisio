@@ -1,3 +1,4 @@
+// src/components/Navbar.jsx
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import logo from '../assets/decisia-logo.png'
@@ -11,8 +12,8 @@ function Navbar() {
     const saved = localStorage.getItem('theme')
     return saved === 'dark'
   })
+  const [open, setOpen] = useState(false)
 
-  // Setze die Klasse explizit bei jeder Änderung
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark')
@@ -21,6 +22,16 @@ function Navbar() {
     }
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (!e.target.closest('.avatar-dropdown')) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
 
   const toggleTheme = () => setDarkMode(prev => !prev)
 
@@ -43,7 +54,6 @@ function Navbar() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <img src={logo} alt="Decisia Logo" className="h-11" />
-          <span className="text-lg font-bold text-[#4F46E5] dark:text-white"></span>
         </div>
 
         {/* Navigation */}
@@ -61,15 +71,9 @@ function Navbar() {
               {item.label}
             </Link>
           ))}
-          <button
-            onClick={handleLogout}
-            className="text-sm font-medium text-red-600 hover:underline"
-          >
-            Logout
-          </button>
         </div>
 
-        {/* Right: Toggle + Avatar */}
+        {/* Right: Toggle + Avatar Dropdown */}
         <div className="flex items-center gap-4">
           <button
             onClick={toggleTheme}
@@ -78,8 +82,35 @@ function Navbar() {
             {darkMode ? '🌙 Dark' : '☀️ Light'}
           </button>
 
-          <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs text-white font-bold">
-            U
+          <div className="relative avatar-dropdown">
+            <button
+              onClick={() => setOpen(!open)}
+              className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs text-white font-bold"
+            >
+              U
+            </button>
+            {open && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
+                <Link
+                  to="/profile"
+                  className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  👤 Profil bearbeiten
+                </Link>
+                <Link
+                  to="/change-password"
+                  className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  🔐 Passwort ändern
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  🚪 Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
