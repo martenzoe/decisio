@@ -1,26 +1,29 @@
-const API_URL = 'http://localhost:3000/api/users'
+// src/api/profile.js
+import { useAuthStore } from '../store/useAuthStore'
 
-// ⬇️ Profil abrufen
-export const getProfile = async (token) => {
-  const res = await fetch(`${API_URL}/me`, {
+export async function fetchProfile() {
+  const { token } = useAuthStore.getState()
+  const res = await fetch('http://localhost:3000/api/users/me', {
     headers: {
-      Authorization: `Bearer ${token}`,
-    },
+      Authorization: `Bearer ${token}`
+    }
   })
-  if (!res.ok) throw new Error('Profil konnte nicht geladen werden.')
-  return await res.json()
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Profil konnte nicht geladen werden')
+  return data
 }
 
-// ⬇️ Profil aktualisieren
-export const updateProfile = async (token, data) => {
-  const res = await fetch(`${API_URL}/me`, {
+export async function saveProfile(profileData) {
+  const { token } = useAuthStore.getState()
+  const res = await fetch('http://localhost:3000/api/users/update', {
     method: 'PUT',
     headers: {
-      'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify(profileData)
   })
-  if (!res.ok) throw new Error('Profil konnte nicht aktualisiert werden.')
-  return await res.json()
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Profil konnte nicht gespeichert werden')
+  return data
 }

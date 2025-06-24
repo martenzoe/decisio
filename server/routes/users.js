@@ -39,8 +39,6 @@ const router = express.Router()
  *       500:
  *         description: Interner Serverfehler
  */
-
-
 router.post('/create', verifyJWT, async (req, res) => {
   const user_id = req.userId
   const { email } = req.body
@@ -59,6 +57,94 @@ router.post('/create', verifyJWT, async (req, res) => {
   }
 
   res.json({ message: '✅ Benutzer in Supabase-Tabelle erstellt' })
+})
+
+/**
+ * @swagger
+ * /api/users/me:
+ *   get:
+ *     summary: Lädt das aktuelle Benutzerprofil
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Profildaten geladen
+ *       500:
+ *         description: Fehler beim Laden des Profils
+ */
+router.get('/me', verifyJWT, async (req, res) => {
+  const user_id = req.userId
+
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, email, nickname, avatar_url, first_name, last_name, birthday')
+      .eq('id', user_id)
+      .single()
+
+    if (error) {
+      console.error('❌ Fehler beim Laden des Profils:', error.message)
+      return res.status(500).json({ error: 'Profil konnte nicht geladen werden' })
+    }
+
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+/**
+ * @swagger
+ * /api/users/update:
+ *   put:
+ *     summary: Aktualisiert das Benutzerprofil
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               nickname:
+ *                 type: string
+ *               avatar_url:
+ *                 type: string
+ *               first_name:
+ *                 type: string
+ *               last_name:
+ *                 type: string
+ *               birthday:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Profil aktualisiert
+ *       500:
+ *         description: Fehler beim Speichern
+ */
+router.put('/update', verifyJWT, async (req, res) => {
+  const user_id = req.userId
+  const { nickname, avatar_url, first_name, last_name, birthday } = req.body
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ nickname, avatar_url, first_name, last_name, birthday })
+      .eq('id', user_id)
+
+    if (error) {
+      console.error('❌ Fehler beim Speichern des Profils:', error.message)
+      return res.status(500).json({ error: 'Profil konnte nicht gespeichert werden' })
+    }
+
+    res.json({ message: '✅ Profil gespeichert' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 export default router

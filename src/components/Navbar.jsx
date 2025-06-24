@@ -2,24 +2,22 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import logo from '../assets/decisia-logo.png'
+import defaultAvatar from '../assets/default-avatar.png'
 import { useState, useEffect } from 'react'
 
 function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { setUser } = useAuthStore()
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme')
-    return saved === 'dark'
-  })
+
+  // Reaktive Zuweisung – damit Änderungen direkt übernommen werden
+  const user = useAuthStore((state) => state.user)
+  const setUser = useAuthStore((state) => state.setUser)
+
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
+    document.documentElement.classList.toggle('dark', darkMode)
     localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
 
@@ -33,7 +31,7 @@ function Navbar() {
     return () => document.removeEventListener('click', handleClickOutside)
   }, [])
 
-  const toggleTheme = () => setDarkMode(prev => !prev)
+  const toggleTheme = () => setDarkMode((prev) => !prev)
 
   const handleLogout = () => {
     localStorage.removeItem('token')
@@ -45,8 +43,11 @@ function Navbar() {
     { path: '/', label: 'Home' },
     { path: '/dashboard', label: 'Dashboard' },
     { path: '/faq', label: 'FAQ' },
-    { path: '/kontakt', label: 'Contact' },
+    { path: '/kontakt', label: 'Contact' }
   ]
+
+  const avatarUrl = user?.avatar_url || defaultAvatar
+  const nickname = user?.nickname || 'User'
 
   return (
     <nav className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm z-50">
@@ -73,7 +74,7 @@ function Navbar() {
           ))}
         </div>
 
-        {/* Right: Toggle + Avatar Dropdown */}
+        {/* Right Side */}
         <div className="flex items-center gap-4">
           <button
             onClick={toggleTheme}
@@ -85,23 +86,31 @@ function Navbar() {
           <div className="relative avatar-dropdown">
             <button
               onClick={() => setOpen(!open)}
-              className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center text-xs text-white font-bold"
+              className="flex items-center gap-2 rounded-full focus:outline-none"
             >
-              U
+              <span className="text-sm font-medium text-gray-800 dark:text-white hidden md:block">
+                {nickname}
+              </span>
+              <img
+                src={avatarUrl}
+                alt="avatar"
+                className="w-8 h-8 rounded-full border border-gray-300"
+              />
             </button>
+
             {open && (
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50">
                 <Link
                   to="/profile"
                   className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  👤 Profil bearbeiten
+                  👤 Edit Profile
                 </Link>
                 <Link
                   to="/change-password"
                   className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  🔐 Passwort ändern
+                  🔐 Change Password
                 </Link>
                 <button
                   onClick={handleLogout}
