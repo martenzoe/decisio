@@ -1,4 +1,3 @@
-// src/api/auth.js
 const API_URL = import.meta.env.VITE_API_URL
 
 export const loginUser = async (email, password) => {
@@ -7,7 +6,6 @@ export const loginUser = async (email, password) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Login fehlgeschlagen')
   return data
@@ -19,7 +17,6 @@ export const registerUser = async (email, password) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Registrierung fehlgeschlagen')
   return data

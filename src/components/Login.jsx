@@ -15,9 +15,9 @@ function Login() {
     setMessage('⏳ Logging in...')
 
     try {
-      const data = await loginUser(email, password)
-      localStorage.setItem('token', data.token)
-      setUser({ email })
+      const { token, user } = await loginUser(email, password)
+      localStorage.setItem('token', token)
+      setUser(user)
       setMessage('✅ Login erfolgreich!')
       navigate('/dashboard')
     } catch (err) {

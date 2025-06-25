@@ -13,8 +13,8 @@ function Register() {
     setMessage('⏳ Creating account...')
 
     try {
-      const data = await registerUser(email, password)
-      setMessage(data.message || '✅ Account erstellt!')
+      await registerUser(email, password)
+      setMessage('✅ Account created!')
       setTimeout(() => navigate('/login'), 1500)
     } catch (err) {
       console.error(err)
