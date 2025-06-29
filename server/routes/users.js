@@ -128,12 +128,23 @@ router.get('/me', verifyJWT, async (req, res) => {
  */
 router.put('/update', verifyJWT, async (req, res) => {
   const user_id = req.userId
-  const { nickname, avatar_url, first_name, last_name, birthday } = req.body
+  const allowedFields = ['nickname', 'avatar_url', 'first_name', 'last_name', 'birthday']
+
+  const updateData = {}
+  for (const key of allowedFields) {
+    if (key in req.body && req.body[key] !== null && req.body[key] !== '') {
+      updateData[key] = req.body[key]
+    }
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return res.status(400).json({ error: 'Keine gültigen Felder zum Aktualisieren gesendet' })
+  }
 
   try {
     const { error } = await supabase
       .from('users')
-      .update({ nickname, avatar_url, first_name, last_name, birthday })
+      .update(updateData)
       .eq('id', user_id)
 
     if (error) {

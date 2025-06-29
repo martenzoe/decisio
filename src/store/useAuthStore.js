@@ -6,11 +6,9 @@ export const useAuthStore = create((set) => ({
   token: localStorage.getItem('token') || null,
 
   setUser: (newUserData) => {
-    set((state) => {
-      const updated = { ...state.user, ...newUserData }
-      console.log('🔁 setUser mit:', updated)
-      return { user: updated }
-    })
+    const updated = { ...newUserData }
+    console.log('🔁 setUser mit:', updated)
+    set({ user: updated })
   },
 
   setToken: (token) => {

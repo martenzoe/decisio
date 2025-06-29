@@ -28,10 +28,16 @@ import ChangePassword from './pages/ChangePassword'
 
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
+  const user = useAuthStore((state) => state.user)
 
   useEffect(() => {
+    console.log('🔄 App startet – lade Benutzerprofil ...')
     loadUserFromToken()
   }, [])
+
+  useEffect(() => {
+    console.log('👤 Aktueller Benutzerzustand:', user)
+  }, [user])
 
   return (
     <div className="min-h-screen">

@@ -9,7 +9,9 @@ import authRoutes from './routes/auth.js'
 import decisionRoutes from './routes/decisions.js'
 import userRoutes from './routes/users.js'
 import aiRoutes from './routes/ai.js'
-import changePasswordRoutes from './routes/changePassword.js' // ✅ NEU
+import changePasswordRoutes from './routes/changePassword.js' 
+
+import commentsRouter from './routes/comments.js'
 
 dotenv.config()
 
@@ -85,6 +87,7 @@ app.use('/api/decision', decisionRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/change-password', changePasswordRoutes) // ✅ NEU
+app.use('/api/comments', commentsRouter)
 
 // ✅ Test-Route
 app.get('/', (req, res) => {
