@@ -66,12 +66,20 @@ function Dashboard() {
               You have created <strong>{filtered.length}</strong> decisions.
             </p>
           </div>
-          <button
-            onClick={() => navigate('/new-decision')}
-            className="bg-[#4F46E5] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#4338CA] transition"
-          >
-            ➕ New Decision
-          </button>
+          <div className="flex gap-4">
+            <button
+              onClick={() => navigate('/new-decision')}
+              className="bg-[#4F46E5] text-white px-4 py-2 rounded-lg font-medium hover:bg-[#4338CA] transition"
+            >
+              ➕ New Decision
+            </button>
+            <button
+              onClick={() => navigate('/new-team-decision')}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition"
+            >
+              🤝 New Team Decision
+            </button>
+          </div>
         </div>
 
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

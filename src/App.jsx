@@ -1,5 +1,5 @@
 // src/App.jsx
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from './store/useAuthStore'
 
@@ -25,6 +25,7 @@ import Datenschutz from './pages/Datenschutz'
 
 import Profile from './pages/Profile'
 import ChangePassword from './pages/ChangePassword'
+import NewTeamDecision from './pages/NewTeamDecision'
 
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
@@ -45,8 +46,10 @@ function App() {
         <Route path="/" element={<MainLayout><Home /></MainLayout>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/logout" element={<Logout />} />
         <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
         <Route path="/new-decision" element={<ProtectedRoute><MainLayout><NewDecision /></MainLayout></ProtectedRoute>} />
+        <Route path="/new-team-decision" element={<ProtectedRoute><MainLayout><NewTeamDecision /></MainLayout></ProtectedRoute>} />
         <Route path="/evaluation" element={<ProtectedRoute><MainLayout><Evaluation /></MainLayout></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><MainLayout><History /></MainLayout></ProtectedRoute>} />
         <Route path="/decision/:id" element={<ProtectedRoute><MainLayout><DecisionDetail /></MainLayout></ProtectedRoute>} />
