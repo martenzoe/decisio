@@ -1,4 +1,3 @@
-// server/index.js
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -9,16 +8,15 @@ import authRoutes from './routes/auth.js'
 import decisionRoutes from './routes/decisions.js'
 import userRoutes from './routes/users.js'
 import aiRoutes from './routes/ai.js'
-import changePasswordRoutes from './routes/changePassword.js' 
-
+import changePasswordRoutes from './routes/changePassword.js'
 import commentsRouter from './routes/comments.js'
+import teamRoutes from './routes/team.js' // ✅ NEU
 
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3000
 
-// ✅ Entwicklungsfreundliche CORS-Konfiguration
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -86,8 +84,9 @@ app.use('/api', authRoutes)
 app.use('/api/decision', decisionRoutes)
 app.use('/api/users', userRoutes)
 app.use('/api/ai', aiRoutes)
-app.use('/api/change-password', changePasswordRoutes) // ✅ NEU
+app.use('/api/change-password', changePasswordRoutes)
 app.use('/api/comments', commentsRouter)
+app.use('/api/team', teamRoutes) // ✅ NEU: Team-Entscheidungen
 
 // ✅ Test-Route
 app.get('/', (req, res) => {
