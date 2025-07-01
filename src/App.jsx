@@ -48,6 +48,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/logout" element={<Logout />} />
+
         <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />
         <Route path="/new-decision" element={<ProtectedRoute><MainLayout><NewDecision /></MainLayout></ProtectedRoute>} />
         <Route path="/new-team-decision" element={<ProtectedRoute><MainLayout><NewTeamDecision /></MainLayout></ProtectedRoute>} />
@@ -56,13 +57,15 @@ function App() {
         <Route path="/decision/:id" element={<ProtectedRoute><MainLayout><DecisionDetail /></MainLayout></ProtectedRoute>} />
         <Route path="/decision/:id/edit" element={<ProtectedRoute><MainLayout><EditDecision /></MainLayout></ProtectedRoute>} />
         <Route path="/decision/:id/evaluate" element={<ProtectedRoute><MainLayout><EvaluateDecision /></MainLayout></ProtectedRoute>} />
+        <Route path="/team-invite/:id" element={<ProtectedRoute><MainLayout><TeamInvite /></MainLayout></ProtectedRoute>} />
+
         <Route path="/faq" element={<MainLayout><Faq /></MainLayout>} />
         <Route path="/kontakt" element={<MainLayout><Kontakt /></MainLayout>} />
         <Route path="/impressum" element={<MainLayout><Impressum /></MainLayout>} />
         <Route path="/datenschutz" element={<MainLayout><Datenschutz /></MainLayout>} />
+
         <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
         <Route path="/change-password" element={<ProtectedRoute><MainLayout><ChangePassword /></MainLayout></ProtectedRoute>} />
-        <Route path="/decision/:id/invite" element={<ProtectedRoute><MainLayout><TeamInvite /></MainLayout></ProtectedRoute>} />
       </Routes>
     </div>
   )

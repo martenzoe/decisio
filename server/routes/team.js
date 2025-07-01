@@ -1,18 +1,18 @@
 import express from 'express'
 import supabase from '../supabaseClient.js'
-import verifyJWT from '../middleware/verifyJWT.js' // ✅ Das existiert bei dir
+import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
-// POST /api/team/create
+// ✅ POST /api/team/create
 router.post('/create', verifyJWT, async (req, res) => {
   const { name, description, mode, timer } = req.body
-  const userId = req.userId // ✅ so setzt es deine verifyJWT.js
+  const userId = req.userId
 
   try {
     const { data: decision, error: decisionError } = await supabase
       .from('decisions')
-      .insert([{ name, description, mode, type: 'team', user_id: userId }])
+      .insert([{ name, description, mode, type: 'private', user_id: userId }])
       .select()
       .single()
 
@@ -39,7 +39,7 @@ router.post('/create', verifyJWT, async (req, res) => {
   }
 })
 
-// POST /api/team/invite
+// ✅ POST /api/team/invite
 router.post('/invite', verifyJWT, async (req, res) => {
   const { decisionId, email, role } = req.body
   const invitedBy = req.userId
@@ -48,10 +48,23 @@ router.post('/invite', verifyJWT, async (req, res) => {
     const { data: user, error: userError } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', email.toLowerCase())
       .single()
 
-    if (userError) return res.status(404).json({ error: 'Nutzer nicht gefunden' })
+    if (userError || !user) {
+      return res.status(404).json({ error: 'Nutzer nicht gefunden' })
+    }
+
+    const { data: existing, error: existingError } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('decision_id', decisionId)
+      .maybeSingle()
+
+    if (existing) {
+      return res.status(409).json({ error: 'User already invited or member' })
+    }
 
     const { error: inviteError } = await supabase
       .from('team_members')
@@ -72,7 +85,7 @@ router.post('/invite', verifyJWT, async (req, res) => {
   }
 })
 
-// POST /api/team/accept
+// ✅ POST /api/team/accept
 router.post('/accept', verifyJWT, async (req, res) => {
   const { decisionId } = req.body
   const userId = req.userId
@@ -90,6 +103,34 @@ router.post('/accept', verifyJWT, async (req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Fehler beim Bestätigen' })
+  }
+})
+
+// ✅ GET /api/team/team-members/:id
+router.get('/team-members/:id', verifyJWT, async (req, res) => {
+  const decisionId = req.params.id
+
+  try {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select(`
+        id,
+        user_id,
+        role,
+        accepted,
+        users:user_id (
+          nickname,
+          avatar_url
+        )
+      `)
+      .eq('decision_id', decisionId)
+
+    if (error) throw error
+
+    res.status(200).json(data)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Fehler beim Abrufen der Teammitglieder' })
   }
 })
 

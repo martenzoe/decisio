@@ -1,4 +1,3 @@
-// src/pages/TeamInvite.jsx
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
@@ -13,11 +12,10 @@ function TeamInvite() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  // Lade alle Team-Mitglieder
   useEffect(() => {
     async function fetchMembers() {
       try {
-        const res = await fetch(`/api/team-members/${decision_id}`, {
+        const res = await fetch(`/api/team/team-members/${decision_id}`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -33,20 +31,19 @@ function TeamInvite() {
     fetchMembers()
   }, [decision_id, token])
 
-  // Einladung senden
   const handleInvite = async (e) => {
     e.preventDefault()
     setMessage('')
     setError('')
 
     try {
-      const res = await fetch('/api/team-invite', {
+      const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ email, role, decision_id })
+        body: JSON.stringify({ email, role, decisionId: decision_id })
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -54,8 +51,8 @@ function TeamInvite() {
       setEmail('')
       setRole('viewer')
 
-      // Aktualisiere Liste
-      const updated = await fetch(`/api/team-members/${decision_id}`, {
+      // Reload members
+      const updated = await fetch(`/api/team/team-members/${decision_id}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -100,10 +97,17 @@ function TeamInvite() {
       <h3 className="text-xl font-semibold mt-6 mb-2">Aktuelle Mitglieder</h3>
       <ul className="space-y-2">
         {members.map(member => (
-          <li key={member.id} className="border p-3 rounded bg-gray-50">
-            <p><strong>{member.nickname}</strong> ({member.email})</p>
-            <p>Rolle: {member.role}</p>
-            <p>Status: {member.accepted ? '✅ Akzeptiert' : '⏳ Offen'}</p>
+          <li key={member.id} className="border p-3 rounded bg-gray-50 flex items-center gap-4">
+            <img
+              src={member.users?.avatar_url || '/default-avatar.png'}
+              alt="avatar"
+              className="w-10 h-10 rounded-full object-cover"
+            />
+            <div>
+              <p className="font-semibold">{member.users?.nickname || 'Anonym'}</p>
+              <p>Rolle: {member.role}</p>
+              <p>Status: {member.accepted ? '✅ Akzeptiert' : '⏳ Offen'}</p>
+            </div>
           </li>
         ))}
       </ul>

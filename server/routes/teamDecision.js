@@ -1,37 +1,51 @@
 import express from 'express'
-import { supabase } from '../db.js'
-import verifyJWT from '../middleware/verifyJWT.js'
+import supabase from '../supabaseClient.js'
+import jwt from 'jsonwebtoken'
 
 const router = express.Router()
 
-// GET: Alle Team-Entscheidungen des eingeloggten Nutzers
-router.get('/', verifyJWT, async (req, res) => {
-  const user_id = req.userId
+// 🔐 Auth-Middleware
+router.use((req, res, next) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader) return res.status(401).json({ error: 'No token provided' })
+
+  const token = authHeader.split(' ')[1]
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    req.user = decoded
+    next()
+  } catch (err) {
+    return res.status(403).json({ error: 'Invalid token' })
+  }
+})
+
+// 📩 POST /api/team-decisions
+router.post('/', async (req, res) => {
+  const { name, description, mode, timer } = req.body
+  const userId = req.user.id
 
   try {
-    // Hole alle Decision-IDs, an denen der Nutzer beteiligt ist (accepted = true)
-    const { data: teamMemberships, error: teamError } = await supabase
-      .from('team_members')
-      .select('decision_id')
-      .eq('user_id', user_id)
-      .eq('accepted', true)
-
-    if (teamError) throw teamError
-
-    const decisionIds = teamMemberships.map(row => row.decision_id)
-
-    // Lade alle Entscheidungen mit diesen IDs (plus Ersteller-Infos)
-    const { data: decisions, error: decisionError } = await supabase
+    const { data, error } = await supabase
       .from('decisions')
-      .select('*')
-      .in('id', decisionIds)
-      .order('created_at', { ascending: false })
+      .insert([
+        {
+          name,
+          description,
+          mode,
+          user_id: userId,
+          timer: timer || null,
+          type: 'team'
+        }
+      ])
+      .select()
+      .single()
 
-    if (decisionError) throw decisionError
+    if (error) throw error
 
-    res.json(decisions)
+    return res.status(201).json({ decision: data })
   } catch (err) {
-    res.status(500).json({ error: err.message })
+    console.error('❌ Fehler beim Erstellen der Team-Entscheidung:', err.message)
+    return res.status(500).json({ error: err.message })
   }
 })
 
