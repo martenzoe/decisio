@@ -26,6 +26,7 @@ import Datenschutz from './pages/Datenschutz'
 import Profile from './pages/Profile'
 import ChangePassword from './pages/ChangePassword'
 import NewTeamDecision from './pages/NewTeamDecision'
+import TeamInvite from './pages/TeamInvite'
 
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
@@ -61,6 +62,7 @@ function App() {
         <Route path="/datenschutz" element={<MainLayout><Datenschutz /></MainLayout>} />
         <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
         <Route path="/change-password" element={<ProtectedRoute><MainLayout><ChangePassword /></MainLayout></ProtectedRoute>} />
+        <Route path="/decision/:id/invite" element={<ProtectedRoute><MainLayout><TeamInvite /></MainLayout></ProtectedRoute>} />
       </Routes>
     </div>
   )

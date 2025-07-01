@@ -60,4 +60,44 @@ router.post('/', verifyJWT, async (req, res) => {
   }
 })
 
+// GET /api/team-members/:decision_id
+router.get('/:decision_id', verifyJWT, async (req, res) => {
+  const decision_id = req.params.decision_id
+
+  try {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select(`
+        id,
+        role,
+        accepted,
+        invited_at,
+        user_id,
+        users (
+          email,
+          nickname,
+          avatar_url
+        )
+      `)
+      .eq('decision_id', decision_id)
+
+    if (error) throw error
+
+    const members = data.map(m => ({
+      id: m.id,
+      role: m.role,
+      accepted: m.accepted,
+      invited_at: m.invited_at,
+      user_id: m.user_id,
+      email: m.users?.email || 'unknown',
+      nickname: m.users?.nickname || 'anonymous',
+      avatar_url: m.users?.avatar_url || null
+    }))
+
+    res.json(members)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 export default router
