@@ -12,6 +12,7 @@ import changePasswordRoutes from './routes/changePassword.js'
 import commentsRouter from './routes/comments.js'
 import teamRoutes from './routes/team.js' // ✅ NEU
 import teamDecisionRoutes from './routes/teamDecision.js'
+import teamInviteRoutes from './routes/teamInvite.js'
 
 dotenv.config()
 
@@ -89,6 +90,7 @@ app.use('/api/change-password', changePasswordRoutes)
 app.use('/api/comments', commentsRouter)
 app.use('/api/team', teamRoutes) // ✅ NEU: Team-Entscheidungen
 app.use('/api/team-decisions', teamDecisionRoutes)
+app.use('/api/team-invite', teamInviteRoutes)
 
 // ✅ Test-Route
 app.get('/', (req, res) => {
