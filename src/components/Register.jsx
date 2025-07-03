@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { registerUser } from '../api/auth'
 
 function Register() {
@@ -7,13 +7,18 @@ function Register() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Invite-Token aus URL lesen (z. B. ?inviteToken=abc123)
+  const params = new URLSearchParams(location.search)
+  const inviteToken = params.get('inviteToken')
 
   const handleRegister = async (e) => {
     e.preventDefault()
     setMessage('⏳ Creating account...')
 
     try {
-      await registerUser(email, password)
+      await registerUser(email, password, inviteToken)
       setMessage('✅ Account created!')
       setTimeout(() => navigate('/login'), 1500)
     } catch (err) {

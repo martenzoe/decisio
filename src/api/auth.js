@@ -1,3 +1,4 @@
+// src/api/auth.js
 const API_URL = import.meta.env.VITE_API_URL
 
 export const loginUser = async (email, password) => {
@@ -11,11 +12,11 @@ export const loginUser = async (email, password) => {
   return data
 }
 
-export const registerUser = async (email, password) => {
+export const registerUser = async (email, password, inviteToken = null) => {
   const res = await fetch(`${API_URL}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, inviteToken }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Registrierung fehlgeschlagen')

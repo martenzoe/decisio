@@ -14,6 +14,7 @@ function TeamInvite() {
 
   useEffect(() => {
     async function fetchMembers() {
+      if (!decision_id) return
       try {
         const res = await fetch(`/api/team/team-members/${decision_id}`, {
           headers: {
@@ -35,6 +36,13 @@ function TeamInvite() {
     e.preventDefault()
     setMessage('')
     setError('')
+
+    if (!decision_id) {
+      setError('Fehlende Entscheidung – Einladung nicht möglich.')
+      return
+    }
+
+    console.log('Sende Einladung:', { email, role, decisionId: decision_id })
 
     try {
       const res = await fetch('/api/team/invite', {

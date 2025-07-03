@@ -1,6 +1,8 @@
 import express from 'express'
+import jwt from 'jsonwebtoken'
 import supabase from '../supabaseClient.js'
 import verifyJWT from '../middleware/verifyJWT.js'
+import { sendInviteMail } from '../utils/mailer.js'
 
 const router = express.Router()
 
@@ -49,13 +51,40 @@ router.post('/invite', verifyJWT, async (req, res) => {
       .from('users')
       .select('id')
       .eq('email', email.toLowerCase())
+      .maybeSingle()
+
+    const { data: inviterData } = await supabase
+      .from('users')
+      .select('nickname')
+      .eq('id', invitedBy)
       .single()
 
-    if (userError || !user) {
-      return res.status(404).json({ error: 'Nutzer nicht gefunden' })
+    const { data: decisionData } = await supabase
+      .from('decisions')
+      .select('name')
+      .eq('id', decisionId)
+      .single()
+
+    if (!user) {
+      // ➕ Nutzer existiert NICHT → Einladung trotzdem versenden
+      const token = jwt.sign(
+        { email, decisionId, role, invitedBy },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      )
+
+      await sendInviteMail({
+        to: email,
+        inviterNickname: inviterData.nickname,
+        decisionName: decisionData.name,
+        inviteToken: token
+      })
+
+      return res.status(200).json({ message: 'Einladung versendet – Nutzer muss sich registrieren' })
     }
 
-    const { data: existing, error: existingError } = await supabase
+    // 🧑 Nutzer existiert → prüfen ob bereits eingeladen
+    const { data: existing } = await supabase
       .from('team_members')
       .select('id')
       .eq('user_id', user.id)
@@ -77,6 +106,12 @@ router.post('/invite', verifyJWT, async (req, res) => {
       }])
 
     if (inviteError) throw inviteError
+
+    await sendInviteMail({
+      to: email,
+      inviterNickname: inviterData.nickname,
+      decisionName: decisionData.name
+    })
 
     res.status(200).json({ message: 'Einladung erfolgreich' })
   } catch (error) {

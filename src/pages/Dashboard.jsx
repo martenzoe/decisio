@@ -9,17 +9,28 @@ function Dashboard() {
   const [filtered, setFiltered] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('latest')
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   useEffect(() => {
     const fetchDecisions = async () => {
-      const token = localStorage.getItem('token')
-      const res = await fetch('http://localhost:3000/api/decision', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      const data = await res.json()
-      setDecisions(data)
-      setFiltered(data)
+      try {
+        const token = localStorage.getItem('token')
+        const res = await fetch('http://localhost:3000/api/decision', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidungen')
+        if (!Array.isArray(data)) throw new Error('Ungültige Datenstruktur')
+        setDecisions(data)
+        setFiltered(data)
+      } catch (err) {
+        console.error('Dashboard Fehler:', err.message)
+        setDecisions([])
+        setFiltered([])
+      } finally {
+        setLoading(false)
+      }
     }
     fetchDecisions()
   }, [])
@@ -112,51 +123,57 @@ function Dashboard() {
           </div>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((d) => (
-            <div
-              key={d.id}
-              className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 shadow-sm flex flex-col justify-between"
-            >
-              <div>
-                <h3 className="font-semibold text-lg text-gray-800 dark:text-white">{d.name}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{d.description}</p>
-                <p className="text-sm mt-2 text-gray-500 dark:text-gray-400">
-                  Mode: {d.mode === 'manual' ? '🧠 Manual' : '🤖 AI'}
-                </p>
-                {d.score && (
-                  <p className="text-sm font-semibold text-right text-green-700 dark:text-green-400 mt-1">
-                    Score: {d.score}
+        {loading ? (
+          <p className="text-center text-gray-500 dark:text-gray-300">Loading decisions…</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-gray-500 dark:text-gray-300">No decisions found.</p>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((d) => (
+              <div
+                key={d.id}
+                className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 shadow-sm flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="font-semibold text-lg text-gray-800 dark:text-white">{d.name}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{d.description}</p>
+                  <p className="text-sm mt-2 text-gray-500 dark:text-gray-400">
+                    Mode: {d.mode === 'manual' ? '🧠 Manual' : '🤖 AI'}
                   </p>
-                )}
-                <p className="text-xs text-gray-400 dark:text-gray-300 mt-3">
-                  Created: {new Date(d.created_at).toLocaleDateString()}<br />
-                  Updated: {new Date(d.updated_at).toLocaleDateString()}
-                </p>
+                  {d.score && (
+                    <p className="text-sm font-semibold text-right text-green-700 dark:text-green-400 mt-1">
+                      Score: {d.score}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-400 dark:text-gray-300 mt-3">
+                    Created: {new Date(d.created_at).toLocaleDateString()}<br />
+                    Updated: {new Date(d.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex gap-3 mt-4 text-sm">
+                  <button
+                    onClick={() => navigate(`/decision/${d.id}`)}
+                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    Details
+                  </button>
+                  <button
+                    onClick={() => navigate(`/decision/${d.id}/edit`)}
+                    className="text-yellow-600 dark:text-yellow-400 hover:underline"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d.id)}
+                    className="text-red-600 dark:text-red-400 hover:underline"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <div className="flex gap-3 mt-4 text-sm">
-                <button
-                  onClick={() => navigate(`/decision/${d.id}`)}
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  Details
-                </button>
-                <button
-                  onClick={() => navigate(`/decision/${d.id}/edit`)}
-                  className="text-yellow-600 dark:text-yellow-400 hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(d.id)}
-                  className="text-red-600 dark:text-red-400 hover:underline"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
