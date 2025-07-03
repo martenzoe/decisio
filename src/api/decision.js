@@ -1,55 +1,69 @@
-const API_URL = 'http://localhost:3000/api';
+// src/api/decision.js
 
-export const getDecisionById = async (id, token) => {
-  const res = await fetch(`${API_URL}/decision/${id}/details`, {
+export async function updateDecision(decisionId, token, data) {
+  const { name, description, mode, type, options, criteria, evaluations } = data;
+
+  // POST Optionen
+  const optionRes = await fetch(`http://localhost:3000/api/decision/${decisionId}/options`, {
+    method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidung');
-  return data;
-};
-
-export const updateDecision = async (id, token, { name, description, mode, type, options, criteria, evaluations }) => {
-  const baseHeaders = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
-  };
-
-  // Entscheidung aktualisieren
-  const resMain = await fetch(`${API_URL}/decision/${id}`, {
-    method: 'PUT',
-    headers: baseHeaders,
-    body: JSON.stringify({ name, description, mode, type }),
-  });
-  const dataMain = await resMain.json();
-  if (!resMain.ok) throw new Error(dataMain.error || 'Fehler beim Aktualisieren');
-
-  // Optionen speichern
-  const resOpt = await fetch(`${API_URL}/decision/${id}/options`, {
-    method: 'POST',
-    headers: baseHeaders,
     body: JSON.stringify({ options }),
   });
-  const dataOpt = await resOpt.json();
-  if (!resOpt.ok) throw new Error(dataOpt.error || 'Fehler beim Speichern der Optionen');
+  if (!optionRes.ok) throw new Error('Fehler beim Speichern der Optionen');
 
-  // Kriterien speichern
-  const resCrit = await fetch(`${API_URL}/decision/${id}/criteria`, {
+  const insertedOptions = await optionRes.json(); // angenommen: Array mit IDs
+  const optionMap = insertedOptions.reduce((acc, opt, idx) => {
+    acc[idx] = opt.id;
+    return acc;
+  }, {});
+
+  // POST Kriterien
+  const criteriaRes = await fetch(`http://localhost:3000/api/decision/${decisionId}/criteria`, {
     method: 'POST',
-    headers: baseHeaders,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ criteria }),
   });
-  const dataCrit = await resCrit.json();
-  if (!resCrit.ok) throw new Error(dataCrit.error || 'Fehler beim Speichern der Kriterien');
+  if (!criteriaRes.ok) throw new Error('Fehler beim Speichern der Kriterien');
 
-  // Bewertungen speichern (Indexbasiert → IDs ermittelt das Backend)
-  const resEval = await fetch(`${API_URL}/decision/${id}/evaluations`, {
+  const insertedCriteria = await criteriaRes.json();
+  const criteriaMap = insertedCriteria.reduce((acc, crit, idx) => {
+    acc[idx] = crit.id;
+    return acc;
+  }, {});
+
+  // Bewertungen mit den neuen IDs zusammenbauen
+  const formattedEvaluations = evaluations.map((e) => ({
+    option_id: optionMap[e.option_index],
+    criterion_id: criteriaMap[e.criterion_index],
+    value: e.value,
+    explanation: e.explanation,
+  }));
+
+  // POST Bewertungen
+  const evalRes = await fetch(`http://localhost:3000/api/decision/${decisionId}/evaluations`, {
     method: 'POST',
-    headers: baseHeaders,
-    body: JSON.stringify({ evaluations }),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ evaluations: formattedEvaluations }),
   });
-  const dataEval = await resEval.json();
-  if (!resEval.ok) throw new Error(dataEval.error || 'Fehler beim Speichern der Bewertungen');
-};
+  if (!evalRes.ok) throw new Error('Fehler beim Speichern der Bewertungen');
+
+  // PATCH Basisdaten
+  const patchRes = await fetch(`http://localhost:3000/api/decision/${decisionId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name, description, mode, type }),
+  });
+  if (!patchRes.ok) throw new Error('Fehler beim Aktualisieren der Entscheidung');
+}

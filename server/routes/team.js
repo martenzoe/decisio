@@ -6,18 +6,17 @@ import { sendInviteMail } from '../utils/mailer.js'
 
 const router = express.Router()
 
-// ✅ POST /api/team/create
+// ✅ Team-Entscheidung erstellen
 router.post('/create', verifyJWT, async (req, res) => {
-  const { name, description, mode, timer } = req.body
+  const { name, description, mode, timer, type } = req.body
   const userId = req.userId
 
   try {
     const { data: decision, error: decisionError } = await supabase
       .from('decisions')
-      .insert([{ name, description, mode, type: 'private', user_id: userId }])
+      .insert([{ name, description, mode, type, user_id: userId }])
       .select()
       .single()
-
     if (decisionError) throw decisionError
 
     const { data: team, error: teamError } = await supabase
@@ -25,13 +24,11 @@ router.post('/create', verifyJWT, async (req, res) => {
       .insert([{ decision_id: decision.id, timer, created_by: userId }])
       .select()
       .single()
-
     if (teamError) throw teamError
 
     const { error: memberError } = await supabase
       .from('team_members')
       .insert([{ decision_id: decision.id, user_id: userId, role: 'owner', accepted: true }])
-
     if (memberError) throw memberError
 
     res.status(200).json({ decision, team })
@@ -41,13 +38,13 @@ router.post('/create', verifyJWT, async (req, res) => {
   }
 })
 
-// ✅ POST /api/team/invite
+// ✅ Nutzer einladen (per E-Mail)
 router.post('/invite', verifyJWT, async (req, res) => {
   const { decisionId, email, role } = req.body
   const invitedBy = req.userId
 
   try {
-    const { data: user, error: userError } = await supabase
+    const { data: user } = await supabase
       .from('users')
       .select('id')
       .eq('email', email.toLowerCase())
@@ -66,7 +63,7 @@ router.post('/invite', verifyJWT, async (req, res) => {
       .single()
 
     if (!user) {
-      // ➕ Nutzer existiert NICHT → Einladung trotzdem versenden
+      // ➕ Nutzer existiert NICHT
       const token = jwt.sign(
         { email, decisionId, role, invitedBy },
         process.env.JWT_SECRET,
@@ -83,7 +80,7 @@ router.post('/invite', verifyJWT, async (req, res) => {
       return res.status(200).json({ message: 'Einladung versendet – Nutzer muss sich registrieren' })
     }
 
-    // 🧑 Nutzer existiert → prüfen ob bereits eingeladen
+    // 👤 Nutzer existiert bereits – prüfen ob schon eingeladen
     const { data: existing } = await supabase
       .from('team_members')
       .select('id')
@@ -104,7 +101,6 @@ router.post('/invite', verifyJWT, async (req, res) => {
         invited_by: invitedBy,
         accepted: false
       }])
-
     if (inviteError) throw inviteError
 
     await sendInviteMail({
@@ -120,18 +116,29 @@ router.post('/invite', verifyJWT, async (req, res) => {
   }
 })
 
-// ✅ POST /api/team/accept
+// ✅ Einladung annehmen
 router.post('/accept', verifyJWT, async (req, res) => {
   const { decisionId } = req.body
   const userId = req.userId
 
   try {
+    const { data: existing, error: fetchError } = await supabase
+      .from('team_members')
+      .select('accepted')
+      .eq('decision_id', decisionId)
+      .eq('user_id', userId)
+      .single()
+    if (fetchError) throw fetchError
+
+    if (existing.accepted) {
+      return res.status(200).json({ message: 'Bereits bestätigt' })
+    }
+
     const { error } = await supabase
       .from('team_members')
       .update({ accepted: true })
       .eq('decision_id', decisionId)
       .eq('user_id', userId)
-
     if (error) throw error
 
     res.status(200).json({ message: 'Teilnahme bestätigt' })
@@ -141,7 +148,7 @@ router.post('/accept', verifyJWT, async (req, res) => {
   }
 })
 
-// ✅ GET /api/team/team-members/:id
+// ✅ Teammitglieder abrufen
 router.get('/team-members/:id', verifyJWT, async (req, res) => {
   const decisionId = req.params.id
 
@@ -159,6 +166,8 @@ router.get('/team-members/:id', verifyJWT, async (req, res) => {
         )
       `)
       .eq('decision_id', decisionId)
+      .order('role', { ascending: false })
+      .order('accepted', { ascending: false })
 
     if (error) throw error
 

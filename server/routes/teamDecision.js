@@ -1,3 +1,5 @@
+// server/routes/teamDecision.js
+
 import express from 'express'
 import supabase from '../supabaseClient.js'
 import jwt from 'jsonwebtoken'
@@ -24,8 +26,13 @@ router.post('/', async (req, res) => {
   const { name, description, mode, timer } = req.body
   const userId = req.user.id
 
+  if (!['manual', 'ai'].includes(mode)) {
+    return res.status(400).json({ error: 'Ungültiger Modus' })
+  }
+
   try {
-    const { data, error } = await supabase
+    // 1. Entscheidung in "decisions" einfügen
+    const { data: decision, error: decisionError } = await supabase
       .from('decisions')
       .insert([
         {
@@ -33,16 +40,28 @@ router.post('/', async (req, res) => {
           description,
           mode,
           user_id: userId,
-          timer: timer || null,
-          type: 'team'
+          type: 'team' // Wichtig: Nur "team" erlaubt
         }
       ])
       .select()
       .single()
 
-    if (error) throw error
+    if (decisionError) throw decisionError
 
-    return res.status(201).json({ decision: data })
+    // 2. Eintrag in "team_decisions" mit Timer
+    const { error: teamError } = await supabase
+      .from('team_decisions')
+      .insert([
+        {
+          decision_id: decision.id,
+          timer: timer || null,
+          created_by: userId
+        }
+      ])
+
+    if (teamError) throw teamError
+
+    return res.status(201).json({ decision })
   } catch (err) {
     console.error('❌ Fehler beim Erstellen der Team-Entscheidung:', err.message)
     return res.status(500).json({ error: err.message })

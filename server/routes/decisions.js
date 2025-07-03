@@ -36,21 +36,82 @@ router.post('/', verifyJWT, async (req, res) => {
   }
 })
 
-// Entscheidung aktualisieren
-router.put('/:id', verifyJWT, async (req, res) => {
-  const { name, description, mode, type } = req.body
-  const user_id = req.userId
+// Optionen speichern
+router.post('/:id/options', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
+  const { options } = req.body
   try {
-    const { data, error } = await supabase
+    await supabase.from('options').delete().eq('decision_id', decision_id)
+    const inserts = options.map(o => ({
+      id: crypto.randomUUID(),
+      name: o.name,
+      decision_id,
+    }))
+    const { data, error } = await supabase.from('options').insert(inserts).select()
+    if (error) throw error
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Kriterien speichern
+router.post('/:id/criteria', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const { criteria } = req.body
+  try {
+    await supabase.from('criteria').delete().eq('decision_id', decision_id)
+    const inserts = criteria.map(c => ({
+      id: crypto.randomUUID(),
+      name: c.name,
+      importance: Number(c.importance),
+      decision_id,
+    }))
+    const { data, error } = await supabase.from('criteria').insert(inserts).select()
+    if (error) throw error
+    res.json(data)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Bewertungen speichern
+router.post('/:id/evaluations', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const { evaluations } = req.body
+  try {
+    await supabase.from('evaluations').delete().eq('decision_id', decision_id)
+    const inserts = evaluations.map(e => ({
+      id: crypto.randomUUID(),
+      decision_id,
+      option_id: e.option_id,
+      criterion_id: e.criterion_id,
+      value: e.value,
+      explanation: e.explanation || null,
+    }))
+    const { error } = await supabase.from('evaluations').insert(inserts)
+    if (error) throw error
+    res.json({ message: '✅ Bewertungen gespeichert' })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Entscheidung aktualisieren (nur Basisdaten)
+router.put('/:id', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const user_id = req.userId
+  const { name, description, mode, type } = req.body
+
+  try {
+    const { error } = await supabase
       .from('decisions')
       .update({ name, description, mode, type })
       .eq('id', decision_id)
       .eq('user_id', user_id)
-      .select()
-      .single()
     if (error) throw error
-    res.json(data)
+
+    res.json({ message: '✅ Entscheidung aktualisiert' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -79,7 +140,7 @@ router.delete('/:id', verifyJWT, async (req, res) => {
   }
 })
 
-// Einzelne Entscheidung mit allen Details
+// Einzelne Entscheidung mit Details
 router.get('/:id/details', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   try {
@@ -90,124 +151,22 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
       .single()
     if (dError) throw dError
 
-    const { data: options } = await supabase.from('options').select('*').eq('decision_id', decision_id)
-    const { data: criteria } = await supabase.from('criteria').select('*').eq('decision_id', decision_id)
-    const { data: evaluations } = await supabase.from('evaluations').select('*').eq('decision_id', decision_id)
+    const { data: options } = await supabase
+      .from('options')
+      .select('*')
+      .eq('decision_id', decision_id)
+
+    const { data: criteria } = await supabase
+      .from('criteria')
+      .select('*')
+      .eq('decision_id', decision_id)
+
+    const { data: evaluations } = await supabase
+      .from('evaluations')
+      .select('*')
+      .eq('decision_id', decision_id)
 
     res.json({ decision, options, criteria, evaluations })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// Optionen speichern
-router.post('/:id/options', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const { options } = req.body
-
-  try {
-    await supabase.from('options').delete().eq('decision_id', decision_id)
-
-    const inserts = options.map(opt => ({
-      id: opt.id || crypto.randomUUID(),
-      name: opt.name || '',
-      decision_id
-    }))
-
-    const { error } = await supabase.from('options').insert(inserts)
-    if (error) throw error
-
-    res.json({ message: 'Optionen gespeichert' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// Kriterien speichern
-router.post('/:id/criteria', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const { criteria } = req.body
-
-  try {
-    await supabase.from('criteria').delete().eq('decision_id', decision_id)
-
-    const inserts = criteria.map(c => ({
-      id: c.id || crypto.randomUUID(),
-      name: c.name,
-      importance: Number(c.importance),
-      decision_id
-    }))
-
-    const { error } = await supabase.from('criteria').insert(inserts)
-    if (error) throw error
-
-    res.json({ message: 'Kriterien gespeichert' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// Bewertungen speichern
-router.post('/:id/evaluations', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const { evaluations } = req.body
-
-  try {
-    await supabase.from('evaluations').delete().eq('decision_id', decision_id)
-
-    const inserts = evaluations.map(e => ({
-      id: crypto.randomUUID(),
-      decision_id,
-      option_id: e.option_id,
-      criterion_id: e.criterion_id,
-      value: e.value,
-      explanation: e.explanation || null
-    }))
-
-    const { error } = await supabase.from('evaluations').insert(inserts)
-    if (error) throw error
-
-    res.json({ message: 'Bewertungen gespeichert' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// Kommentar speichern
-router.post('/:id/comments', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const user_id = req.userId
-  const { text } = req.body
-  if (!text) return res.status(400).json({ error: 'Text fehlt' })
-
-  try {
-    const { data, error } = await supabase
-      .from('comments')
-      .insert([{ decision_id, user_id, text }])
-      .select()
-      .single()
-
-    if (error) throw error
-    res.status(201).json(data)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// Kommentare abrufen
-router.get('/:id/comments', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  try {
-    const { data, error } = await supabase
-      .from('comments')
-      .select(`
-        *,
-        users:nickname
-      `)
-      .eq('decision_id', decision_id)
-      .order('created_at', { ascending: false })
-    if (error) throw error
-    res.json(data)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
