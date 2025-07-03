@@ -1,3 +1,4 @@
+// src/pages/Profile.jsx
 import { useEffect, useState } from 'react'
 import AvatarUploader from '../components/AvatarUploader'
 import { useAuthStore } from '../store/useAuthStore'
@@ -5,13 +6,7 @@ import { fetchProfile, saveProfile } from '../api/profile'
 
 function Profile() {
   const { setUser } = useAuthStore()
-  const [form, setForm] = useState({
-    nickname: '',
-    avatar_url: '',
-    first_name: '',
-    last_name: '',
-    birthday: ''
-  })
+  const [form, setForm] = useState(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -37,17 +32,18 @@ function Profile() {
     try {
       setLoading(true)
       await saveProfile(form)
-
-      // 🆕 aktualisiere globales user-Objekt mit neu geladenem Profil
       const fresh = await fetchProfile()
       setUser(fresh)
-
       console.log('✅ Profil gespeichert')
     } catch (err) {
       console.error('❌ Fehler beim Speichern:', err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  if (!form) {
+    return <div className="text-center text-white mt-10">Loading profile …</div>
   }
 
   return (
@@ -65,18 +61,20 @@ function Profile() {
         <input
           type="text"
           name="nickname"
-          value={form.nickname}
+          value={form.nickname || ''}
           maxLength={20}
           onChange={handleChange}
           className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
         />
-        <p className="text-xs text-gray-400 text-right mt-1 mb-3">{form.nickname.length}/20</p>
+        <p className="text-xs text-gray-400 text-right mt-1 mb-3">
+          {(form.nickname || '').length}/20
+        </p>
 
         <label className="text-sm mb-1 block">First Name</label>
         <input
           type="text"
           name="first_name"
-          value={form.first_name}
+          value={form.first_name || ''}
           onChange={handleChange}
           className="w-full mb-4 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
         />
@@ -85,7 +83,7 @@ function Profile() {
         <input
           type="text"
           name="last_name"
-          value={form.last_name}
+          value={form.last_name || ''}
           onChange={handleChange}
           className="w-full mb-4 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
         />
