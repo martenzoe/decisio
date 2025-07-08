@@ -1,3 +1,5 @@
+// server/routes/decision.js
+
 import express from 'express'
 import crypto from 'crypto'
 import { supabase } from '../db.js'
@@ -5,13 +7,54 @@ import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
-// Alle Entscheidungen eines Nutzers oder Teammitglieds
+// 📦 Eigene + akzeptierte Team-Entscheidungen
 router.get('/', verifyJWT, async (req, res) => {
   const user_id = req.userId
+  console.log('📥 GET /api/decision für User:', user_id)
+
   try {
-    const { data, error } = await supabase.rpc('get_user_decisions', {
-      input_user_id: user_id,
-    })
+    // Eigene Entscheidungen
+    const { data: own, error: ownError } = await supabase
+      .from('decisions')
+      .select('*')
+      .eq('user_id', user_id)
+
+    if (ownError) throw ownError
+    console.log(`➡️ Eigene Entscheidungen (${own.length}):`, own.map(d => d.name))
+
+    // Team-Entscheidungen
+    const { data: team, error: teamError } = await supabase
+      .from('decisions')
+      .select('*, team_members!inner(user_id, accepted)')
+      .eq('team_members.user_id', user_id)
+      .eq('team_members.accepted', true)
+
+    if (teamError) throw teamError
+    console.log(`➡️ Team-Entscheidungen (${team.length}):`, team.map(d => d.name))
+
+    // Duplikate entfernen
+    const all = [...own, ...team].filter(
+      (v, i, a) => a.findIndex(t => t.id === v.id) === i
+    )
+
+    console.log(`✅ Gesamtanzahl Entscheidungen: ${all.length}`)
+    res.json(all)
+  } catch (err) {
+    console.error('❌ Fehler beim Laden der Entscheidungen:', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// 👥 Nur Team-Entscheidungen
+router.get('/my', verifyJWT, async (req, res) => {
+  const user_id = req.userId
+  try {
+    const { data, error } = await supabase
+      .from('decisions')
+      .select('*, team_members!inner(user_id, accepted)')
+      .eq('team_members.user_id', user_id)
+      .eq('team_members.accepted', true)
+
     if (error) throw error
     res.json(data)
   } catch (err) {
@@ -19,7 +62,7 @@ router.get('/', verifyJWT, async (req, res) => {
   }
 })
 
-// Entscheidung erstellen
+// ➕ Entscheidung erstellen
 router.post('/', verifyJWT, async (req, res) => {
   const { name, description, mode = 'manual', type = 'private' } = req.body
   const user_id = req.userId
@@ -29,6 +72,7 @@ router.post('/', verifyJWT, async (req, res) => {
       .insert([{ name, description, mode, type, user_id }])
       .select()
       .single()
+
     if (error) throw error
     res.status(201).json(data)
   } catch (err) {
@@ -36,7 +80,7 @@ router.post('/', verifyJWT, async (req, res) => {
   }
 })
 
-// Optionen speichern
+// ✏️ Optionen speichern
 router.post('/:id/options', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const { options } = req.body
@@ -55,7 +99,7 @@ router.post('/:id/options', verifyJWT, async (req, res) => {
   }
 })
 
-// Kriterien speichern
+// ✏️ Kriterien speichern
 router.post('/:id/criteria', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const { criteria } = req.body
@@ -75,7 +119,7 @@ router.post('/:id/criteria', verifyJWT, async (req, res) => {
   }
 })
 
-// Bewertungen speichern
+// 🧮 Bewertungen speichern
 router.post('/:id/evaluations', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const { evaluations } = req.body
@@ -97,27 +141,26 @@ router.post('/:id/evaluations', verifyJWT, async (req, res) => {
   }
 })
 
-// Entscheidung aktualisieren (nur Basisdaten)
+// 🔄 Entscheidung aktualisieren
 router.put('/:id', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
   const { name, description, mode, type } = req.body
-
   try {
     const { error } = await supabase
       .from('decisions')
       .update({ name, description, mode, type })
       .eq('id', decision_id)
       .eq('user_id', user_id)
-    if (error) throw error
 
+    if (error) throw error
     res.json({ message: '✅ Entscheidung aktualisiert' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
-// Entscheidung löschen
+// 🗑️ Entscheidung löschen
 router.delete('/:id', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
@@ -133,6 +176,7 @@ router.delete('/:id', verifyJWT, async (req, res) => {
       .delete()
       .eq('id', decision_id)
       .eq('user_id', user_id)
+
     if (error) throw error
     res.json({ message: '✅ Entscheidung gelöscht' })
   } catch (err) {
@@ -140,7 +184,7 @@ router.delete('/:id', verifyJWT, async (req, res) => {
   }
 })
 
-// Einzelne Entscheidung mit Details
+// 📄 Einzelne Entscheidung + Details
 router.get('/:id/details', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   try {

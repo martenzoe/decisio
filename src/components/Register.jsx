@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { registerUser } from '../api/auth'
 
@@ -9,21 +9,38 @@ function Register() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Invite-Token aus URL lesen (z. B. ?inviteToken=abc123)
-  const params = new URLSearchParams(location.search)
-  const inviteToken = params.get('inviteToken')
+  // 📌 Invite-Token aus URL speichern (falls vorhanden)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const inviteToken = params.get('token') || params.get('inviteToken')
+    if (inviteToken) {
+      localStorage.setItem('pendingInviteToken', inviteToken)
+      localStorage.setItem('inviteTokenFresh', 'true')
+    }
+  }, [location.search])
 
   const handleRegister = async (e) => {
     e.preventDefault()
-    setMessage('⏳ Creating account...')
+    setMessage('⏳ Account wird erstellt …')
 
     try {
+      const inviteToken = localStorage.getItem('pendingInviteToken')
       await registerUser(email, password, inviteToken)
-      setMessage('✅ Account created!')
-      setTimeout(() => navigate('/login'), 1500)
+      setMessage('✅ Account erfolgreich erstellt!')
+
+      setTimeout(() => {
+        const isFresh = localStorage.getItem('inviteTokenFresh') === 'true'
+        if (inviteToken && isFresh) {
+          localStorage.removeItem('pendingInviteToken')
+          localStorage.removeItem('inviteTokenFresh')
+          navigate(`/invite?token=${inviteToken}`)
+        } else {
+          navigate('/login')
+        }
+      }, 1000)
     } catch (err) {
       console.error(err)
-      setMessage(err.message)
+      setMessage(err.message || 'Fehler bei der Registrierung')
     }
   }
 

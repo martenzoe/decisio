@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 import { loginUser } from '../api/auth'
 
@@ -8,7 +8,18 @@ function Login() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const navigate = useNavigate()
+  const location = useLocation()
   const { setUser } = useAuthStore()
+
+  // 📌 Invite-Token aus URL holen und in localStorage speichern (wenn vorhanden)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const inviteToken = params.get('inviteToken') || params.get('token')
+    if (inviteToken) {
+      localStorage.setItem('pendingInviteToken', inviteToken)
+      localStorage.setItem('inviteTokenFresh', 'true')
+    }
+  }, [location.search])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -19,10 +30,24 @@ function Login() {
       localStorage.setItem('token', token)
       setUser(user)
       setMessage('✅ Login erfolgreich!')
-      navigate('/dashboard')
+
+      const inviteToken = localStorage.getItem('pendingInviteToken')
+      const isFresh = localStorage.getItem('inviteTokenFresh') === 'true'
+
+      if (inviteToken && isFresh) {
+        // Token wurde frisch per URL übergeben – weiterleiten zu Invite
+        localStorage.removeItem('pendingInviteToken')
+        localStorage.removeItem('inviteTokenFresh')
+        navigate(`/invite?token=${inviteToken}`)
+      } else {
+        // Kein frischer Invite – direkt zum Dashboard
+        localStorage.removeItem('inviteTokenFresh')
+        navigate('/dashboard')
+      }
+
     } catch (err) {
       console.error(err)
-      setMessage(err.message)
+      setMessage(err.message || 'Fehler beim Login')
     }
   }
 

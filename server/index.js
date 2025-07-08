@@ -4,16 +4,14 @@ import dotenv from 'dotenv'
 import swaggerUi from 'swagger-ui-express'
 import swaggerJSDoc from 'swagger-jsdoc'
 
-import authRoutes from './routes/auth.js'
-import decisionRoutes from './routes/decisions.js'
-import userRoutes from './routes/users.js'
 import aiRoutes from './routes/ai.js'
+import authRoutes from './routes/auth.js'
 import changePasswordRoutes from './routes/changePassword.js'
 import commentsRouter from './routes/comments.js'
-import teamRoutes from './routes/team.js' // ✅ NEU
+import decisionRoutes from './routes/decisions.js'
+import teamRoutes from './routes/team.js' // ✅ Zentrale Team-Logik
 import teamDecisionRoutes from './routes/teamDecision.js'
-import teamInviteRoutes from './routes/teamInvite.js'
-
+import userRoutes from './routes/users.js'
 
 dotenv.config()
 
@@ -48,7 +46,6 @@ app.use(cors({
   credentials: true,
 }))
 
-// 🔧 Middleware
 app.use(express.json())
 
 // ✅ Swagger Setup
@@ -70,11 +67,7 @@ const swaggerOptions = {
         }
       }
     },
-    security: [
-      {
-        bearerAuth: []
-      }
-    ]
+    security: [{ bearerAuth: [] }]
   },
   apis: ['./routes/*.js'],
 }
@@ -89,9 +82,8 @@ app.use('/api/users', userRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/change-password', changePasswordRoutes)
 app.use('/api/comments', commentsRouter)
-app.use('/api/team', teamRoutes) // ✅ NEU: Team-Entscheidungen
+app.use('/api/team', teamRoutes) // ✅ zentrale Team-Funktionen
 app.use('/api/team-decisions', teamDecisionRoutes)
-app.use('/api/team-invite', teamInviteRoutes)
 
 // ✅ Test-Route
 app.get('/', (req, res) => {

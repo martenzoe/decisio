@@ -3,7 +3,7 @@
 export async function updateDecision(decisionId, token, data) {
   const { name, description, mode, type, options, criteria, evaluations } = data;
 
-  // POST Optionen
+  // Optionen speichern
   const optionRes = await fetch(`http://localhost:3000/api/decision/${decisionId}/options`, {
     method: 'POST',
     headers: {
@@ -14,13 +14,13 @@ export async function updateDecision(decisionId, token, data) {
   });
   if (!optionRes.ok) throw new Error('Fehler beim Speichern der Optionen');
 
-  const insertedOptions = await optionRes.json(); // angenommen: Array mit IDs
+  const insertedOptions = await optionRes.json();
   const optionMap = insertedOptions.reduce((acc, opt, idx) => {
     acc[idx] = opt.id;
     return acc;
   }, {});
 
-  // POST Kriterien
+  // Kriterien speichern
   const criteriaRes = await fetch(`http://localhost:3000/api/decision/${decisionId}/criteria`, {
     method: 'POST',
     headers: {
@@ -37,7 +37,7 @@ export async function updateDecision(decisionId, token, data) {
     return acc;
   }, {});
 
-  // Bewertungen mit den neuen IDs zusammenbauen
+  // Bewertungen mit neuen IDs verknüpfen
   const formattedEvaluations = evaluations.map((e) => ({
     option_id: optionMap[e.option_index],
     criterion_id: criteriaMap[e.criterion_index],
@@ -45,7 +45,7 @@ export async function updateDecision(decisionId, token, data) {
     explanation: e.explanation,
   }));
 
-  // POST Bewertungen
+  // Bewertungen speichern
   const evalRes = await fetch(`http://localhost:3000/api/decision/${decisionId}/evaluations`, {
     method: 'POST',
     headers: {
@@ -56,7 +56,7 @@ export async function updateDecision(decisionId, token, data) {
   });
   if (!evalRes.ok) throw new Error('Fehler beim Speichern der Bewertungen');
 
-  // PATCH Basisdaten
+  // Basisdaten aktualisieren
   const patchRes = await fetch(`http://localhost:3000/api/decision/${decisionId}`, {
     method: 'PUT',
     headers: {

@@ -1,6 +1,6 @@
+// src/pages/NewTeamDecision.jsx
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createTeamDecision } from '../api/teamDecision'
 
 function NewTeamDecision() {
   const [decisionName, setDecisionName] = useState('')
@@ -59,12 +59,29 @@ function NewTeamDecision() {
 
     setLoading(true)
     try {
-      const data = await createTeamDecision(
-        { name: decisionName, description, mode, timer },
-        token
-      )
-      if (!data?.id) throw new Error('Fehlerhafte Antwort vom Server')
-      navigate(`/team-invite/${data.id}`)
+      const res = await fetch('/api/team-decisions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: decisionName,
+          description,
+          mode,
+          timer,
+          type: 'team'
+        })
+      })
+
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Unbekannter Fehler')
+
+      const { decision } = result
+      if (!decision?.id) throw new Error('❌ Keine gültige Decision-ID erhalten')
+
+      // ✅ Gehe zur Invite-Seite mit der ID
+      navigate(`/team-invite/${decision.id}`)
     } catch (err) {
       console.error('❌ Fehler beim Erstellen:', err.message)
       alert(`❌ ${err.message}`)
@@ -77,9 +94,7 @@ function NewTeamDecision() {
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 py-12 px-4">
       <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 text-gray-800 dark:text-gray-100 shadow-2xl rounded-2xl p-8 space-y-10">
         <h1 className="text-3xl font-bold">Neue Team-Entscheidung</h1>
-
         <form onSubmit={handleSubmit} className="space-y-10">
-
           {/* Allgemeine Infos */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input

@@ -1,124 +1,155 @@
+import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { useAuthStore } from '../store/useAuthStore'
+import { updateDecision } from '../api/decision'
 
 function TeamInvite() {
-  const { id: decision_id } = useParams()
-  const token = useAuthStore(state => state.token)
+  const { id } = useParams()
+  const navigate = useNavigate()
 
+  const [teamMembers, setTeamMembers] = useState([])
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState('viewer')
-  const [members, setMembers] = useState([])
-  const [message, setMessage] = useState('')
-  const [error, setError] = useState('')
+  const [role, setRole] = useState('editor')
+  const [inviteLink, setInviteLink] = useState('')
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [activateSuccess, setActivateSuccess] = useState(null)
+  const [activateError, setActivateError] = useState(null)
+
+  const fetchTeamMembers = async () => {
+    setLoading(true)
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`/api/team/team-members/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Fehler beim Laden')
+      setTeamMembers(data)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchMembers() {
-      if (!decision_id) return
-      try {
-        const res = await fetch(`/api/team/team-members/${decision_id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error)
-        setMembers(data)
-      } catch (err) {
-        setError(err.message)
-      }
-    }
+    fetchTeamMembers()
+  }, [id])
 
-    fetchMembers()
-  }, [decision_id, token])
-
-  const handleInvite = async (e) => {
-    e.preventDefault()
-    setMessage('')
-    setError('')
-
-    if (!decision_id) {
-      setError('Fehlende Entscheidung – Einladung nicht möglich.')
-      return
-    }
-
-    console.log('Sende Einladung:', { email, role, decisionId: decision_id })
-
+  const handleInvite = async () => {
+    setError(null)
+    setSuccess(null)
+    setInviteLink('')
     try {
+      const token = localStorage.getItem('token')
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ email, role, decisionId: decision_id })
+        body: JSON.stringify({ decision_id: id, email, role }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setMessage('✅ Einladung gesendet')
+      if (!res.ok) throw new Error(data.error || 'Einladung fehlgeschlagen')
+      setSuccess(data.message)
+      if (data.token || data.invite_token) {
+        setInviteLink(`${window.location.origin}/invite?token=${data.token || data.invite_token}`)
+      }
       setEmail('')
-      setRole('viewer')
-
-      // Reload members
-      const updated = await fetch(`/api/team/team-members/${decision_id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      })
-      const updatedData = await updated.json()
-      setMembers(updatedData)
+      fetchTeamMembers()
     } catch (err) {
       setError(err.message)
     }
   }
 
-  return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Team-Mitglieder einladen</h2>
+  const handleActivateDecision = async () => {
+    setActivateError(null)
+    setActivateSuccess(null)
+    try {
+      const token = localStorage.getItem('token')
+      await updateDecision(id, token, {
+        name: 'Team-Entscheidung',
+        description: 'Diese Entscheidung wurde für ein Team erstellt.',
+        mode: 'manual',
+        type: 'team',
+        options: [],
+        criteria: [],
+        evaluations: [],
+      })
+      setActivateSuccess('Entscheidung wurde aktiviert.')
+      navigate('/dashboard')
+    } catch (err) {
+      setActivateError('Aktivierung fehlgeschlagen: ' + err.message)
+    }
+  }
 
-      <form onSubmit={handleInvite} className="space-y-4">
+  return (
+    <div className="max-w-2xl mx-auto p-6 space-y-6">
+      <h2 className="text-2xl font-bold">Team-Einladung</h2>
+
+      <div className="space-y-2">
+        <label className="block font-medium">E-Mail-Adresse</label>
         <input
           type="email"
-          placeholder="E-Mail-Adresse"
+          className="w-full border rounded p-2"
           value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-          className="w-full border rounded px-3 py-2"
+          onChange={(e) => setEmail(e.target.value)}
         />
+
+        <label className="block font-medium mt-4">Rolle</label>
         <select
+          className="w-full border rounded p-2"
           value={role}
-          onChange={e => setRole(e.target.value)}
-          className="w-full border rounded px-3 py-2"
+          onChange={(e) => setRole(e.target.value)}
         >
-          <option value="viewer">Viewer</option>
           <option value="editor">Editor</option>
-          <option value="owner">Owner</option>
+          <option value="viewer">Viewer</option>
         </select>
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+
+        <button
+          onClick={handleInvite}
+          className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+        >
           Einladung senden
         </button>
-      </form>
 
-      {message && <p className="mt-4 text-green-600">{message}</p>}
-      {error && <p className="mt-4 text-red-600">{error}</p>}
+        {success && <p className="text-green-600 mt-2">{success}</p>}
+        {error && <p className="text-red-600 mt-2">{error}</p>}
+        {inviteLink && (
+          <div className="mt-4 p-3 bg-gray-100 dark:bg-neutral-800 rounded">
+            <p className="text-sm">🔗 Einladung kopieren:</p>
+            <code className="block break-words">{inviteLink}</code>
+          </div>
+        )}
+      </div>
 
-      <h3 className="text-xl font-semibold mt-6 mb-2">Aktuelle Mitglieder</h3>
-      <ul className="space-y-2">
-        {members.map(member => (
-          <li key={member.id} className="border p-3 rounded bg-gray-50 flex items-center gap-4">
-            <img
-              src={member.users?.avatar_url || '/default-avatar.png'}
-              alt="avatar"
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div>
-              <p className="font-semibold">{member.users?.nickname || 'Anonym'}</p>
-              <p>Rolle: {member.role}</p>
-              <p>Status: {member.accepted ? '✅ Akzeptiert' : '⏳ Offen'}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <div>
+        <h3 className="text-lg font-semibold mt-6 mb-2">Teammitglieder</h3>
+        {loading ? (
+          <p>⏳ Lädt ...</p>
+        ) : (
+          <ul className="divide-y">
+            {teamMembers.map((m) => (
+              <li key={m.id} className="py-2">
+                👤 {m.users?.nickname || 'Unbekannt'} – {m.role} {m.accepted ? '✅' : '⏳'}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-8">
+        <button
+          onClick={handleActivateDecision}
+          className="bg-green-600 text-white px-4 py-2 rounded"
+        >
+          Entscheidung aktivieren
+        </button>
+        {activateSuccess && <p className="text-green-600 mt-2">{activateSuccess}</p>}
+        {activateError && <p className="text-red-600 mt-2">{activateError}</p>}
+      </div>
     </div>
   )
 }

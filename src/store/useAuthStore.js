@@ -3,12 +3,13 @@ import { create } from 'zustand'
 
 export const useAuthStore = create((set) => ({
   user: null,
+  userId: null,
   token: localStorage.getItem('token') || null,
 
   setUser: (newUserData) => {
     const updated = { ...newUserData }
     console.log('🔁 setUser mit:', updated)
-    set({ user: updated })
+    set({ user: updated, userId: updated.id })
   },
 
   setToken: (token) => {
@@ -18,7 +19,7 @@ export const useAuthStore = create((set) => ({
 
   logout: () => {
     localStorage.removeItem('token')
-    set({ user: null, token: null })
+    set({ user: null, token: null, userId: null })
   },
 
   loadUserFromToken: async () => {
@@ -43,7 +44,7 @@ export const useAuthStore = create((set) => ({
       }
 
       console.log('✅ Profil vom Server geladen:', data)
-      set({ user: data })
+      set({ user: data, userId: data.id })
     } catch (err) {
       console.error('❌ Netzwerkfehler beim Laden des Benutzers:', err.message)
     }
