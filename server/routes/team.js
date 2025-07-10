@@ -1,3 +1,4 @@
+// server/routes/team.js
 import express from 'express'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
@@ -41,7 +42,7 @@ router.post('/create', verifyJWT, async (req, res) => {
   }
 })
 
-// ✅ Nutzer einladen (per E-Mail)
+// ✅ Nutzer einladen
 router.post('/invite', verifyJWT, async (req, res) => {
   const { decision_id, email, role } = req.body
   const invitedBy = req.userId
@@ -123,6 +124,18 @@ router.post('/invite', verifyJWT, async (req, res) => {
 
     const inviteUrl = `${BASE_URL}/invite?token=${token}`
 
+    const { error: notifError } = await supabase
+      .from('notifications')
+      .insert([{
+        user_id: user.id,
+        message: `Du wurdest zur Entscheidung "${decisionData.name}" eingeladen.`,
+        link: `/invite?token=${token}`,
+        read: false, // ✅ Korrigiert
+        decision_id,
+        inviter_id: invitedBy
+      }])
+    if (notifError) throw notifError
+
     await resend.emails.send({
       from: process.env.FROM_EMAIL || 'no-reply@decisia.de',
       to: email,
@@ -136,101 +149,14 @@ router.post('/invite', verifyJWT, async (req, res) => {
 
     res.status(200).json({ message: 'Einladung erfolgreich' })
   } catch (error) {
-    console.error(error)
+    console.error('❌ Fehler bei Einladung:', error)
     res.status(500).json({ error: 'Fehler beim Einladen' })
   }
 })
 
-// ✅ Einladung validieren (JWT oder DB-Token)
-router.get('/validate/:token', async (req, res) => {
-  const token = req.params.token
-
-  // Erst versuchen, als JWT zu verifizieren
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
-
-    return res.status(200).json({
-      type: 'jwt',
-      email: decoded.email,
-      decision_id: decoded.decisionId,
-      role: decoded.role
-    })
-  } catch (jwtError) {
-    // Wenn kein JWT – als Invite-Token in DB prüfen
-    try {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('id, decision_id, user_id, role, accepted, invite_expires_at')
-        .eq('invite_token', token)
-        .maybeSingle()
-
-      if (error) throw error
-      if (!data) return res.status(404).json({ error: 'Token not found' })
-
-      const now = new Date()
-      const expiry = new Date(data.invite_expires_at)
-      if (expiry < now) return res.status(410).json({ error: 'Token expired' })
-
-      return res.status(200).json({
-        type: 'db',
-        ...data
-      })
-    } catch (dbError) {
-      return res.status(500).json({ error: 'Fehler bei der Validierung' })
-    }
-  }
-})
-
-// ✅ Einladung annehmen
-router.post('/accept', verifyJWT, async (req, res) => {
-  const { invite_token } = req.body
-  const userId = req.userId
-
-  if (!invite_token) {
-    return res.status(400).json({ error: 'Token fehlt' })
-  }
-
-  try {
-    const { data: invite, error } = await supabase
-      .from('team_members')
-      .select('id, decision_id, accepted, user_id')
-      .eq('invite_token', invite_token)
-      .maybeSingle()
-
-    if (error || !invite) {
-      return res.status(400).json({ error: 'Ungültiger oder abgelaufener Token' })
-    }
-
-    if (invite.user_id !== userId) {
-      return res.status(403).json({ error: 'Diese Einladung gehört nicht zu deinem Benutzerkonto' })
-    }
-
-    if (invite.accepted) {
-      return res.status(200).json({ message: 'Bereits bestätigt', decision_id: invite.decision_id })
-    }
-
-    const { error: updateError } = await supabase
-      .from('team_members')
-      .update({
-        user_id: userId,
-        decision_id: invite.decision_id,
-        accepted: true,
-        invite_token: null
-      })
-      .eq('id', invite.id)
-
-    if (updateError) throw updateError
-
-    res.status(200).json({ message: 'Teilnahme bestätigt', decision_id: invite.decision_id })
-  } catch (error) {
-    console.error('❌ Fehler beim Akzeptieren:', error)
-    res.status(500).json({ error: 'Fehler beim Bestätigen der Einladung' })
-  }
-})
-
-// ✅ Teammitglieder abrufen
+// ✅ Team-Mitglieder abrufen
 router.get('/team-members/:id', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
+  const decisionId = req.params.id
 
   try {
     const { data, error } = await supabase
@@ -240,22 +166,99 @@ router.get('/team-members/:id', verifyJWT, async (req, res) => {
         user_id,
         role,
         accepted,
-        users:user_id (
+        users!team_members_user_id_fkey (
           nickname,
           avatar_url
         )
       `)
-      .eq('decision_id', decision_id)
-      .order('role', { ascending: false })
-      .order('accepted', { ascending: false })
+      .eq('decision_id', decisionId)
 
     if (error) throw error
 
     res.status(200).json(data)
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Fehler beim Abrufen der Teammitglieder' })
+  } catch (err) {
+    console.error('❌ Fehler beim Abrufen der Team-Mitglieder:', err)
+    res.status(500).json({ error: 'Fehler beim Abrufen der Team-Mitglieder' })
   }
 })
+
+// ✅ Invite-Link validieren
+router.get('/validate/:token', async (req, res) => {
+  const token = req.params.token
+
+  try {
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('id, decision_id, user_id, role, invite_expires_at, accepted')
+      .eq('invite_token', token)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return res.status(404).json({ error: 'Ungültiger Token' })
+    if (data.accepted) return res.status(410).json({ error: 'Einladung wurde bereits angenommen' })
+
+    const isExpired = new Date(data.invite_expires_at) < new Date()
+    if (isExpired) return res.status(410).json({ error: 'Einladungslink abgelaufen' })
+
+    res.status(200).json(data)
+  } catch (err) {
+    console.error('❌ Fehler bei Token-Validierung:', err)
+    res.status(500).json({ error: 'Fehler bei der Token-Validierung' })
+  }
+})
+
+// ✅ Einladung annehmen
+router.post('/accept', verifyJWT, async (req, res) => {
+  const { invite_token } = req.body
+  const userId = req.userId
+
+  if (!invite_token) {
+    return res.status(400).json({ error: 'Kein Invite-Token übermittelt' })
+  }
+
+  try {
+    const { data: memberData, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('invite_token', invite_token)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!memberData) return res.status(404).json({ error: 'Ungültiger Token' })
+
+    if (memberData.user_id !== userId) {
+      return res.status(403).json({ error: 'Nicht berechtigt' })
+    }
+
+    const { error: updateError } = await supabase
+      .from('team_members')
+      .update({ accepted: true })
+      .eq('id', memberData.id)
+
+    if (updateError) throw updateError
+
+    // ✅ Optionale Notification an den Einladenden
+    if (memberData.invited_by) {
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: memberData.invited_by,
+          message: `Die Einladung zur Entscheidung wurde angenommen.`,
+          decision_id: memberData.decision_id,
+          read: false
+        }])
+      if (notifError) throw notifError
+    }
+
+    res.status(200).json({
+      message: 'Einladung angenommen',
+      decision_id: memberData.decision_id
+    })
+  } catch (err) {
+    console.error('❌ Fehler bei Annahme:', err)
+    res.status(500).json({ error: 'Fehler beim Annehmen der Einladung' })
+  }
+})
+
 
 export default router

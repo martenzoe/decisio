@@ -13,7 +13,7 @@ function Invite() {
   const [status, setStatus] = useState('loading')
   const [info, setInfo] = useState(null)
 
-  // 🔍 Token validieren
+  // 📌 Token validieren
   useEffect(() => {
     if (!token) {
       setStatus('error')
@@ -22,12 +22,13 @@ function Invite() {
     validateToken()
   }, [token])
 
-  // 🔐 Einladung annehmen
+  // ✅ Einladung annehmen – reagiert auch auf spätes Laden von user/jwt/info
   useEffect(() => {
-    if (status === 'ready' && user && jwt && info?.type === 'db') {
+    if (!token || info?.type !== 'db') return
+    if (status === 'ready' && user && jwt) {
       acceptInvite()
     }
-  }, [status, user, jwt, info])
+  }, [status, user, jwt, token, info])
 
   const validateToken = async () => {
     try {
@@ -38,7 +39,6 @@ function Invite() {
       setInfo(data)
       setStatus('ready')
 
-      // 🎯 Token in localStorage sichern (auch bei JWT)
       localStorage.setItem('pendingInviteToken', token)
     } catch (err) {
       console.error('❌ Validierung fehlgeschlagen:', err.message)
@@ -69,11 +69,7 @@ function Invite() {
       localStorage.removeItem('pendingInviteToken')
 
       const decisionId = info?.decision_id || result?.decision_id
-      if (decisionId) {
-        navigate(`/decision/${decisionId}`)
-      } else {
-        navigate('/dashboard')
-      }
+      navigate(decisionId ? `/decision/${decisionId}` : '/dashboard')
     } catch (err) {
       console.error('❌ Fehler beim Annehmen:', err.message)
       setStatus('error')

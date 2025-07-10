@@ -9,9 +9,10 @@ import authRoutes from './routes/auth.js'
 import changePasswordRoutes from './routes/changePassword.js'
 import commentsRouter from './routes/comments.js'
 import decisionRoutes from './routes/decisions.js'
-import teamRoutes from './routes/team.js' // ✅ Zentrale Team-Logik
+import teamRoutes from './routes/team.js'
 import teamDecisionRoutes from './routes/teamDecision.js'
 import userRoutes from './routes/users.js'
+import notificationsRoutes from './routes/notifications.js' // ✅ Notification-Route ergänzt
 
 dotenv.config()
 
@@ -33,7 +34,7 @@ app.use(cors({
   origin: (origin, callback) => {
     console.log('🔍 Origin:', origin)
     if (
-      !origin || // z. B. Swagger, Postman, cURL
+      !origin ||
       allowedOrigins.includes(origin) ||
       origin.includes('localhost')
     ) {
@@ -82,8 +83,9 @@ app.use('/api/users', userRoutes)
 app.use('/api/ai', aiRoutes)
 app.use('/api/change-password', changePasswordRoutes)
 app.use('/api/comments', commentsRouter)
-app.use('/api/team', teamRoutes) // ✅ zentrale Team-Funktionen
+app.use('/api/team', teamRoutes)
 app.use('/api/team-decisions', teamDecisionRoutes)
+app.use('/api/notifications', notificationsRoutes) // ✅ NEU
 
 // ✅ Test-Route
 app.get('/', (req, res) => {

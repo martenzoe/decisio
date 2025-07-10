@@ -20,7 +20,6 @@ router.get('/', verifyJWT, async (req, res) => {
       .eq('user_id', user_id)
 
     if (ownError) throw ownError
-    console.log(`➡️ Eigene Entscheidungen (${own.length}):`, own.map(d => d.name))
 
     // Team-Entscheidungen
     const { data: team, error: teamError } = await supabase
@@ -30,34 +29,15 @@ router.get('/', verifyJWT, async (req, res) => {
       .eq('team_members.accepted', true)
 
     if (teamError) throw teamError
-    console.log(`➡️ Team-Entscheidungen (${team.length}):`, team.map(d => d.name))
 
     // Duplikate entfernen
     const all = [...own, ...team].filter(
       (v, i, a) => a.findIndex(t => t.id === v.id) === i
     )
 
-    console.log(`✅ Gesamtanzahl Entscheidungen: ${all.length}`)
     res.json(all)
   } catch (err) {
     console.error('❌ Fehler beim Laden der Entscheidungen:', err.message)
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// 👥 Nur Team-Entscheidungen
-router.get('/my', verifyJWT, async (req, res) => {
-  const user_id = req.userId
-  try {
-    const { data, error } = await supabase
-      .from('decisions')
-      .select('*, team_members!inner(user_id, accepted)')
-      .eq('team_members.user_id', user_id)
-      .eq('team_members.accepted', true)
-
-    if (error) throw error
-    res.json(data)
-  } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
@@ -184,10 +164,38 @@ router.delete('/:id', verifyJWT, async (req, res) => {
   }
 })
 
-// 📄 Einzelne Entscheidung + Details
+// 📄 Einzelne Entscheidung + Details mit Zugriffskontrolle
 router.get('/:id/details', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
+  const user_id = req.userId
+
   try {
+    // ✅ Zugriff prüfen – OWNER?
+    const { data: isOwner, error: ownerError } = await supabase
+      .from('decisions')
+      .select('id')
+      .eq('id', decision_id)
+      .eq('user_id', user_id)
+      .single()
+
+    // ✅ Zugriff prüfen – TEAM MEMBER?
+    const { data: isMember, error: memberError } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('decision_id', decision_id)
+      .eq('user_id', user_id)
+      .eq('accepted', true)
+      .single()
+
+    if (ownerError && memberError) {
+      throw ownerError || memberError
+    }
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({ error: 'Kein Zugriff auf diese Entscheidung' })
+    }
+
+    // Entscheidung & Details laden
     const { data: decision, error: dError } = await supabase
       .from('decisions')
       .select('*')
@@ -212,6 +220,7 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
 
     res.json({ decision, options, criteria, evaluations })
   } catch (err) {
+    console.error('❌ Fehler in /details:', err.message)
     res.status(500).json({ error: err.message })
   }
 })

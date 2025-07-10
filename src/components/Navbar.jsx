@@ -8,13 +8,24 @@ import { useState, useEffect } from 'react'
 function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-
-  // Reaktive Zuweisung – damit Änderungen direkt übernommen werden
   const user = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
+  const token = localStorage.getItem('token')
 
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
   const [open, setOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState([])
+
+  const avatarUrl = user?.avatar_url || defaultAvatar
+  const nickname = user?.nickname || 'User'
+
+  const navItems = [
+    { path: '/', label: 'Home' },
+    { path: '/dashboard', label: 'Dashboard' },
+    { path: '/faq', label: 'FAQ' },
+    { path: '/kontakt', label: 'Contact' }
+  ]
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -23,9 +34,8 @@ function Navbar() {
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (!e.target.closest('.avatar-dropdown')) {
-        setOpen(false)
-      }
+      if (!e.target.closest('.avatar-dropdown')) setOpen(false)
+      if (!e.target.closest('.notif-dropdown')) setNotifOpen(false)
     }
     document.addEventListener('click', handleClickOutside)
     return () => document.removeEventListener('click', handleClickOutside)
@@ -39,25 +49,54 @@ function Navbar() {
     navigate('/login')
   }
 
-  const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/faq', label: 'FAQ' },
-    { path: '/kontakt', label: 'Contact' }
-  ]
+  const fetchNotifications = async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/api/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const result = await res.json()
 
-  const avatarUrl = user?.avatar_url || defaultAvatar
-  const nickname = user?.nickname || 'User'
+      if (Array.isArray(result)) {
+        setNotifications(result)
+      } else {
+        console.warn('⚠️ Keine gültigen Benachrichtigungen:', result)
+        setNotifications([])
+      }
+    } catch (err) {
+      console.error('❌ Fehler beim Laden der Benachrichtigungen:', err)
+      setNotifications([])
+    }
+  }
+
+  const handleAccept = async (id, link) => {
+    try {
+      await fetch(`/api/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      fetchNotifications()
+      if (link) navigate(link)
+    } catch (err) {
+      console.error('❌ Fehler beim Bestätigen:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (user) fetchNotifications()
+  }, [user])
+
+  const unreadCount = Array.isArray(notifications)
+    ? notifications.filter((n) => !n.read).length
+    : 0
 
   return (
     <nav className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
-        {/* Logo */}
         <div className="flex items-center gap-2">
           <img src={logo} alt="Decisia Logo" className="h-11" />
         </div>
 
-        {/* Navigation */}
         <div className="hidden md:flex items-center gap-6">
           {navItems.map((item) => (
             <Link
@@ -74,7 +113,6 @@ function Navbar() {
           ))}
         </div>
 
-        {/* Right Side */}
         <div className="flex items-center gap-4">
           <button
             onClick={toggleTheme}
@@ -82,6 +120,60 @@ function Navbar() {
           >
             {darkMode ? '🌙 Dark' : '☀️ Light'}
           </button>
+
+          {/* Glocke */}
+          <div className="relative notif-dropdown">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative text-gray-600 dark:text-gray-200"
+            >
+              🔔
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full px-1.5">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 max-h-96 overflow-y-auto">
+                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      setNotifOpen(false)
+                      navigate('/notifications')
+                    }}
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    🔍 Alle Benachrichtigungen anzeigen
+                  </button>
+                </div>
+
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-sm text-gray-500 dark:text-gray-300">
+                    Keine Benachrichtigungen
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className="px-4 py-2 border-b border-gray-100 dark:border-gray-700"
+                    >
+                      <p className="text-sm text-gray-800 dark:text-gray-100">{n.message}</p>
+                      {!n.read && (
+                        <button
+                          onClick={() => handleAccept(n.id, n.link)}
+                          className="mt-1 text-xs text-blue-600 hover:underline"
+                        >
+                          Annehmen
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="relative avatar-dropdown">
             <button

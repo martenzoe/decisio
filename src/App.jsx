@@ -30,6 +30,7 @@ import ChangePassword from './pages/ChangePassword'
 import NewTeamDecision from './pages/NewTeamDecision'
 import Invite from './pages/Invite'
 import TeamInvite from './pages/TeamInvite' // ✅ wieder hinzugefügt
+import NotificationsPage from './pages/NotificationsPage'
 
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
@@ -57,6 +58,7 @@ function App() {
         <Route path="/impressum" element={<MainLayout><Impressum /></MainLayout>} />
         <Route path="/datenschutz" element={<MainLayout><Datenschutz /></MainLayout>} />
         <Route path="/invite" element={<Invite />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
 
         {/* 🔐 Geschützte Seiten */}
         <Route path="/dashboard" element={<ProtectedRoute><MainLayout><Dashboard /></MainLayout></ProtectedRoute>} />

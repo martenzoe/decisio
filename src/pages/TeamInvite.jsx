@@ -70,9 +70,6 @@ function TeamInvite() {
     try {
       const token = localStorage.getItem('token')
       await updateDecision(id, token, {
-        name: 'Team-Entscheidung',
-        description: 'Diese Entscheidung wurde für ein Team erstellt.',
-        mode: 'manual',
         type: 'team',
         options: [],
         criteria: [],
