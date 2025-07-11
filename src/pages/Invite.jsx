@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 
+console.log('📣 Invite-Komponente geladen')
+
 function Invite() {
   const navigate = useNavigate()
   const { search } = useLocation()
@@ -13,35 +15,45 @@ function Invite() {
   const [status, setStatus] = useState('loading')
   const [info, setInfo] = useState(null)
 
+  console.log('🔍 URL Token:', token)
+  console.log('👤 Aktueller User:', user)
+  console.log('🔐 Aktuelles JWT:', jwt)
+
   // 📌 Token validieren
   useEffect(() => {
     if (!token) {
+      console.warn('⚠️ Kein Token in der URL gefunden')
       setStatus('error')
       return
     }
     validateToken()
   }, [token])
 
-  // ✅ Einladung annehmen – reagiert auch auf spätes Laden von user/jwt/info
+  // ✅ Einladung annehmen – wenn alles geladen ist
   useEffect(() => {
-    if (!token || info?.type !== 'db') return
+    if (!token) return
     if (status === 'ready' && user && jwt) {
+      console.log('🚀 acceptInvite wird ausgelöst')
       acceptInvite()
     }
-  }, [status, user, jwt, token, info])
+  }, [status, user, jwt, token])
 
   const validateToken = async () => {
     try {
+      console.log('🔍 Validierung startet für Token:', token)
       const res = await fetch(`/api/team/validate/${token}`)
       const data = await res.json()
+
+      console.log('✅ Server-Antwort:', data)
       if (!res.ok) throw new Error(data.error)
 
       setInfo(data)
       setStatus('ready')
 
       localStorage.setItem('pendingInviteToken', token)
+      console.log('💾 Token lokal gespeichert')
     } catch (err) {
-      console.error('❌ Validierung fehlgeschlagen:', err.message)
+      console.error('❌ Fehler bei validateToken:', err.message)
       setStatus('error')
     }
   }
@@ -50,6 +62,7 @@ function Invite() {
     try {
       const invite_token = token || localStorage.getItem('pendingInviteToken')
       if (!invite_token) {
+        console.warn('⚠️ Kein gültiger Invite-Token gefunden')
         setStatus('error')
         return
       }
@@ -64,11 +77,15 @@ function Invite() {
       })
 
       const result = await res.json()
+      console.log('📦 Antwort vom Server nach Annahme:', result)
       if (!res.ok) throw new Error(result.error)
 
       localStorage.removeItem('pendingInviteToken')
+      console.log('🧹 Token aus LocalStorage entfernt')
 
       const decisionId = info?.decision_id || result?.decision_id
+      console.log('➡️ Weiterleitung zu:', decisionId)
+
       navigate(decisionId ? `/decision/${decisionId}` : '/dashboard')
     } catch (err) {
       console.error('❌ Fehler beim Annehmen:', err.message)
@@ -76,7 +93,7 @@ function Invite() {
     }
   }
 
-  // 🧭 UI States
+  // UI States
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-white">
@@ -122,7 +139,7 @@ function Invite() {
     )
   }
 
-  if (status === 'ready' && user && jwt && info?.type === 'db') {
+  if (status === 'ready' && user && jwt) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-white">
         <p className="text-xl">✅ Einladung angenommen. Weiterleitung …</p>

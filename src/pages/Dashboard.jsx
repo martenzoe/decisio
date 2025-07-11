@@ -22,8 +22,11 @@ function Dashboard() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidungen')
         if (!Array.isArray(data)) throw new Error('Ungültige Datenstruktur')
-        setDecisions(data)
-        setFiltered(data)
+
+        const unique = Array.from(new Map(data.map(d => [d.id, d])).values())
+
+        setDecisions(unique)
+        setFiltered(unique)
       } catch (err) {
         console.error('Dashboard Fehler:', err.message)
         setDecisions([])
