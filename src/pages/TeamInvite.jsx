@@ -1,10 +1,13 @@
+// src/pages/TeamInvite.jsx
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { updateDecision } from '../api/decision'
+import { useAuthStore } from '../store/useAuthStore'
 
 function TeamInvite() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const token = useAuthStore((s) => s.token)
 
   const [teamMembers, setTeamMembers] = useState([])
   const [email, setEmail] = useState('')
@@ -19,12 +22,15 @@ function TeamInvite() {
   const fetchTeamMembers = async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Kein gültiger Token gefunden')
+
       const res = await fetch(`/api/team/team-members/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
+
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Fehler beim Laden')
+
       setTeamMembers(data)
     } catch (err) {
       setError(err.message)
@@ -35,14 +41,16 @@ function TeamInvite() {
 
   useEffect(() => {
     fetchTeamMembers()
-  }, [id])
+  }, [id, token])
 
   const handleInvite = async () => {
     setError(null)
     setSuccess(null)
     setInviteLink('')
+
     try {
-      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Kein gültiger Token gefunden')
+
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: {
@@ -51,12 +59,15 @@ function TeamInvite() {
         },
         body: JSON.stringify({ decision_id: id, email, role }),
       })
+
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Einladung fehlgeschlagen')
+
       setSuccess(data.message)
       if (data.token || data.invite_token) {
         setInviteLink(`${window.location.origin}/invite?token=${data.token || data.invite_token}`)
       }
+
       setEmail('')
       fetchTeamMembers()
     } catch (err) {
@@ -67,14 +78,17 @@ function TeamInvite() {
   const handleActivateDecision = async () => {
     setActivateError(null)
     setActivateSuccess(null)
+
     try {
-      const token = localStorage.getItem('token')
+      if (!token) throw new Error('Kein gültiger Token gefunden')
+
       await updateDecision(id, token, {
         type: 'team',
         options: [],
         criteria: [],
         evaluations: [],
       })
+
       setActivateSuccess('Entscheidung wurde aktiviert.')
       navigate('/dashboard')
     } catch (err) {
@@ -114,6 +128,7 @@ function TeamInvite() {
 
         {success && <p className="text-green-600 mt-2">{success}</p>}
         {error && <p className="text-red-600 mt-2">{error}</p>}
+
         {inviteLink && (
           <div className="mt-4 p-3 bg-gray-100 dark:bg-neutral-800 rounded">
             <p className="text-sm">🔗 Einladung kopieren:</p>

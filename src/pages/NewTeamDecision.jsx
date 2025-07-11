@@ -1,6 +1,7 @@
 // src/pages/NewTeamDecision.jsx
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/useAuthStore'
 
 function NewTeamDecision() {
   const [decisionName, setDecisionName] = useState('')
@@ -11,7 +12,17 @@ function NewTeamDecision() {
   const [criteria, setCriteria] = useState([{ name: '', importance: '' }])
   const [evaluations, setEvaluations] = useState({})
   const [loading, setLoading] = useState(false)
+
   const navigate = useNavigate()
+  const token = useAuthStore((s) => s.token)
+
+  // Sicherheit: Kein Zugriff ohne Token
+  useEffect(() => {
+    if (!token) {
+      console.warn('⚠️ Kein Token vorhanden – redirect zum Login')
+      navigate('/login')
+    }
+  }, [token, navigate])
 
   const updateEvaluations = (opts, crits) => {
     const evals = {}
@@ -28,15 +39,17 @@ function NewTeamDecision() {
     const updated = [...options]
     updated[idx] = value
     setOptions(updated)
-    updateEvaluations(updated, criteria)
   }
 
   const handleCriterionChange = (idx, key, value) => {
     const updated = [...criteria]
     updated[idx][key] = value
     setCriteria(updated)
-    updateEvaluations(options, updated)
   }
+
+  useEffect(() => {
+    updateEvaluations(options, criteria)
+  }, [options, criteria])
 
   const handleEvaluationChange = (optIdx, critIdx, value) => {
     setEvaluations((prev) => ({
@@ -50,8 +63,6 @@ function NewTeamDecision() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    const token = localStorage.getItem('token')
-    if (!token) return alert('⛔ Kein Token gefunden')
 
     if (!decisionName || !timer || options.some(o => !o) || criteria.some(c => !c.name || !c.importance)) {
       return alert('⚠️ Bitte alle Felder ausfüllen')
@@ -80,7 +91,6 @@ function NewTeamDecision() {
       const { decision } = result
       if (!decision?.id) throw new Error('❌ Keine gültige Decision-ID erhalten')
 
-      // ✅ Gehe zur Invite-Seite mit der ID
       navigate(`/team-invite/${decision.id}`)
     } catch (err) {
       console.error('❌ Fehler beim Erstellen:', err.message)
@@ -143,11 +153,7 @@ function NewTeamDecision() {
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    const updated = options.filter((_, i) => i !== idx)
-                    setOptions(updated)
-                    updateEvaluations(updated, criteria)
-                  }}
+                  onClick={() => setOptions(options.filter((_, i) => i !== idx))}
                   className="text-red-500 font-bold"
                 >
                   X
@@ -184,11 +190,7 @@ function NewTeamDecision() {
                 />
                 <button
                   type="button"
-                  onClick={() => {
-                    const updated = criteria.filter((_, i) => i !== idx)
-                    setCriteria(updated)
-                    updateEvaluations(options, updated)
-                  }}
+                  onClick={() => setCriteria(criteria.filter((_, i) => i !== idx))}
                   className="text-red-500 font-bold"
                 >
                   X
@@ -207,22 +209,22 @@ function NewTeamDecision() {
           {/* Bewertungsmatrix */}
           {mode === 'manual' && criteria.length > 0 && options.length > 0 && (
             <div className="overflow-x-auto">
-              <h2 className="text-lg font-semibold mb-3">Bewertung: Wie stark erfüllt jede Option das Kriterium?</h2>
-              <table className="min-w-full border border-neutral-300 dark:border-neutral-600 text-sm">
+              <h2 className="text-lg font-semibold mb-3">Bewertung</h2>
+              <table className="min-w-full border text-sm border-neutral-300 dark:border-neutral-600">
                 <thead className="bg-neutral-200 dark:bg-neutral-600 text-gray-800 dark:text-gray-100">
                   <tr>
-                    <th className="p-2 border dark:border-neutral-500">Option</th>
+                    <th className="p-2 border">Option</th>
                     {criteria.map((c, j) => (
-                      <th key={j} className="p-2 border dark:border-neutral-500">{c.name || `Kriterium ${j + 1}`}</th>
+                      <th key={j} className="p-2 border">{c.name || `Kriterium ${j + 1}`}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {options.map((opt, i) => (
                     <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-neutral-50 dark:bg-neutral-700'}>
-                      <td className="p-2 border font-medium dark:border-neutral-600">{opt || `Option ${i + 1}`}</td>
+                      <td className="p-2 border font-medium">{opt}</td>
                       {criteria.map((_, j) => (
-                        <td key={j} className="p-2 border dark:border-neutral-600">
+                        <td key={j} className="p-2 border">
                           <input
                             type="number"
                             min="0"

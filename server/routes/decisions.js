@@ -5,10 +5,9 @@ import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
-// 📦 Eigene + akzeptierte Team-Entscheidungen aus View
+// 📦 Eigene + akzeptierte Team-Entscheidungen
 router.get('/', verifyJWT, async (req, res) => {
   const user_id = req.userId
-  console.log('📥 GET /api/decision für User:', user_id)
 
   try {
     const { data, error } = await supabase
@@ -56,82 +55,76 @@ router.post('/', verifyJWT, async (req, res) => {
   }
 })
 
-// ✏️ Optionen speichern
-router.post('/:id/options', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const { options } = req.body
-  try {
-    await supabase.from('options').delete().eq('decision_id', decision_id)
-    const inserts = options.map(o => ({
-      id: crypto.randomUUID(),
-      name: o.name,
-      decision_id,
-    }))
-    const { data, error } = await supabase.from('options').insert(inserts).select()
-    if (error) throw error
-    res.json(data)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// ✏️ Kriterien speichern
-router.post('/:id/criteria', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const { criteria } = req.body
-  try {
-    await supabase.from('criteria').delete().eq('decision_id', decision_id)
-    const inserts = criteria.map(c => ({
-      id: crypto.randomUUID(),
-      name: c.name,
-      importance: Number(c.importance),
-      decision_id,
-    }))
-    const { data, error } = await supabase.from('criteria').insert(inserts).select()
-    if (error) throw error
-    res.json(data)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// 🧮 Bewertungen speichern
-router.post('/:id/evaluations', verifyJWT, async (req, res) => {
-  const decision_id = req.params.id
-  const { evaluations } = req.body
-  try {
-    await supabase.from('evaluations').delete().eq('decision_id', decision_id)
-    const inserts = evaluations.map(e => ({
-      id: crypto.randomUUID(),
-      decision_id,
-      option_id: e.option_id,
-      criterion_id: e.criterion_id,
-      value: e.value,
-      explanation: e.explanation || null,
-    }))
-    const { error } = await supabase.from('evaluations').insert(inserts)
-    if (error) throw error
-    res.json({ message: '✅ Bewertungen gespeichert' })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
-// 🔄 Entscheidung aktualisieren
+// 🔄 Entscheidung + Details aktualisieren
 router.put('/:id', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
-  const { name, description, mode, type } = req.body
+  const { name, description, mode, type, options, criteria, evaluations } = req.body
+
   try {
-    const { error } = await supabase
+    // Entscheidung aktualisieren
+    const { error: updateError } = await supabase
       .from('decisions')
       .update({ name, description, mode, type })
       .eq('id', decision_id)
       .eq('user_id', user_id)
+    if (updateError) throw updateError
 
-    if (error) throw error
-    res.json({ message: '✅ Entscheidung aktualisiert' })
+    // Optionen ersetzen
+    let insertedOptions = []
+    if (Array.isArray(options)) {
+      await supabase.from('options').delete().eq('decision_id', decision_id)
+      const optInsert = options.map(o => ({
+        id: crypto.randomUUID(),
+        name: o.name,
+        decision_id
+      }))
+      const { data, error: optError } = await supabase.from('options').insert(optInsert).select()
+      if (optError) throw optError
+      insertedOptions = data
+    }
+
+    // Kriterien ersetzen
+    let insertedCriteria = []
+    if (Array.isArray(criteria)) {
+      await supabase.from('criteria').delete().eq('decision_id', decision_id)
+      const critInsert = criteria.map(c => ({
+        id: crypto.randomUUID(),
+        name: c.name,
+        importance: Number(c.importance),
+        decision_id
+      }))
+      const { data, error: critError } = await supabase.from('criteria').insert(critInsert).select()
+      if (critError) throw critError
+      insertedCriteria = data
+    }
+
+    // Bewertungen ersetzen
+    if (Array.isArray(evaluations)) {
+      await supabase.from('evaluations').delete().eq('decision_id', decision_id)
+
+      const evalInsert = evaluations.map(e => {
+        const option = insertedOptions[e.option_index]
+        const criterion = insertedCriteria[e.criterion_index]
+        if (!option || !criterion) return null
+
+        return {
+          id: crypto.randomUUID(),
+          decision_id,
+          option_id: option.id,
+          criterion_id: criterion.id,
+          value: e.value,
+          explanation: e.explanation || null
+        }
+      }).filter(Boolean)
+
+      const { error: evalError } = await supabase.from('evaluations').insert(evalInsert)
+      if (evalError) throw evalError
+    }
+
+    res.json({ message: '✅ Entscheidung inkl. Optionen, Kriterien & Bewertungen aktualisiert' })
   } catch (err) {
+    console.error('❌ Fehler beim Aktualisieren:', err.message)
     res.status(500).json({ error: err.message })
   }
 })
@@ -160,20 +153,20 @@ router.delete('/:id', verifyJWT, async (req, res) => {
   }
 })
 
-// 📄 Einzelne Entscheidung + Details mit Zugriffskontrolle
+// 📄 Entscheidung + Details abrufen
 router.get('/:id/details', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
 
   try {
-    const { data: isOwner, error: ownerError } = await supabase
+    const { data: isOwner } = await supabase
       .from('decisions')
       .select('id')
       .eq('id', decision_id)
       .eq('user_id', user_id)
       .single()
 
-    const { data: isMember, error: memberError } = await supabase
+    const { data: isMember } = await supabase
       .from('team_members')
       .select('id')
       .eq('decision_id', decision_id)
@@ -181,18 +174,15 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
       .eq('accepted', true)
       .single()
 
-    if (ownerError && memberError) throw ownerError || memberError
-
     if (!isOwner && !isMember) {
       return res.status(403).json({ error: 'Kein Zugriff auf diese Entscheidung' })
     }
 
-    const { data: decision, error: dError } = await supabase
+    const { data: decision } = await supabase
       .from('decisions')
       .select('*')
       .eq('id', decision_id)
       .single()
-    if (dError) throw dError
 
     const { data: options } = await supabase
       .from('options')
@@ -216,7 +206,7 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
   }
 })
 
-// 🧭 Entscheidungstyp (Team oder Solo) für Redirect
+// 🧭 Entscheidungstyp abrufen
 router.get('/:id/type', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId

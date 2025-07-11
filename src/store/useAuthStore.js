@@ -1,52 +1,56 @@
-// src/store/useAuthStore.js
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
-export const useAuthStore = create((set) => ({
-  user: null,
-  userId: null,
-  token: localStorage.getItem('token') || null,
+export const useAuthStore = create(
+  persist(
+    (set) => ({
+      user: null,
+      userId: null,
+      token: null,
 
-  setUser: (newUserData) => {
-    const updated = { ...newUserData }
-    console.log('🔁 setUser mit:', updated)
-    set({ user: updated, userId: updated.id })
-  },
-
-  setToken: (token) => {
-    localStorage.setItem('token', token)
-    set({ token })
-  },
-
-  logout: () => {
-    localStorage.removeItem('token')
-    set({ user: null, token: null, userId: null })
-  },
-
-  loadUserFromToken: async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      console.log('🔐 Kein Token gefunden')
-      return
-    }
-
-    try {
-      const res = await fetch('http://localhost:3000/api/users/me', {
-        headers: {
-          Authorization: `Bearer ${token}`
+      setUser: (newUserData) => {
+        if (!newUserData) {
+          console.log('🔁 setUser mit: null (reset)')
+          set({ user: null, userId: null })
+          return
         }
-      })
+        console.log('🔁 setUser mit:', newUserData)
+        set({ user: newUserData, userId: newUserData.id })
+      },
 
-      const data = await res.json()
+      setToken: (token) => {
+        console.log('🔑 Token gesetzt:', token)
+        set({ token })
+      },
 
-      if (!res.ok) {
-        console.error('❌ Fehler beim Laden des Profils:', data.error)
-        return
+      logout: () => {
+        set({ user: null, userId: null, token: null })
+      },
+
+      loadUserFromToken: async () => {
+        const token = useAuthStore.getState().token
+        if (!token) {
+          console.log('🔐 Kein Token im Store')
+          return
+        }
+
+        try {
+          const res = await fetch('http://localhost:3000/api/users/me', {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          const data = await res.json()
+          if (!res.ok) {
+            console.error('❌ Fehler beim Laden des Profils:', data.error)
+            return
+          }
+
+          set({ user: data, userId: data.id })
+          console.log('✅ Profil vom Server geladen:', data)
+        } catch (err) {
+          console.error('❌ Netzwerkfehler beim Laden des Benutzers:', err.message)
+        }
       }
-
-      console.log('✅ Profil vom Server geladen:', data)
-      set({ user: data, userId: data.id })
-    } catch (err) {
-      console.error('❌ Netzwerkfehler beim Laden des Benutzers:', err.message)
-    }
-  }
-}))
+    }),
+    { name: 'auth-store' }
+  )
+)

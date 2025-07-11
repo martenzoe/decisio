@@ -8,9 +8,8 @@ import { useState, useEffect } from 'react'
 function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-  const setUser = useAuthStore((state) => state.setUser)
-  const token = localStorage.getItem('token')
+
+  const { user, token, setUser } = useAuthStore()
 
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
   const [open, setOpen] = useState(false)
@@ -83,8 +82,8 @@ function Navbar() {
   }
 
   useEffect(() => {
-    if (user) fetchNotifications()
-  }, [user])
+    if (user && token) fetchNotifications()
+  }, [user, token])
 
   const unreadCount = Array.isArray(notifications)
     ? notifications.filter((n) => !n.read).length

@@ -12,7 +12,7 @@ export default function TeamDecisionDetail() {
   const [error, setError] = useState(null)
   const inputRef = useRef(null)
 
-  const token = localStorage.getItem('token')
+  const token = useAuthStore((s) => s.token)
   const { user } = useAuthStore()
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function TeamDecisionDetail() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()
-      if (!res.ok || !json.decision) throw new Error(json.error || 'No team decision found')
+      if (!res.ok || !json.decision) throw new Error(json.error || 'Keine Team-Entscheidung gefunden')
       setData(json)
     } catch (err) {
       setError(err.message)
@@ -47,7 +47,7 @@ export default function TeamDecisionDetail() {
       const json = await res.json()
       setComments(Array.isArray(json) ? json : [])
     } catch (err) {
-      console.error('❌ Error loading comments:', err)
+      console.error('❌ Fehler beim Laden der Kommentare:', err)
     }
   }
 
@@ -83,7 +83,7 @@ export default function TeamDecisionDetail() {
   }
 
   async function handleDelete(commentId) {
-    if (!window.confirm('Delete this comment?')) return
+    if (!window.confirm('Kommentar wirklich löschen?')) return
     const res = await fetch(`/api/comments/${commentId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
@@ -92,7 +92,7 @@ export default function TeamDecisionDetail() {
   }
 
   if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
-  if (!user || !data) return <div className="text-gray-400 text-center mt-10">⏳ Loading team decision …</div>
+  if (!user || !data) return <div className="text-gray-400 text-center mt-10">⏳ Team-Entscheidung wird geladen …</div>
 
   const { decision, options = [], criteria = [], evaluations = [] } = data
 
@@ -110,9 +110,6 @@ export default function TeamDecisionDetail() {
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6">
         <h2 className="text-2xl font-bold mb-2">{decision.title}</h2>
         <p className="text-gray-600 dark:text-gray-300">{decision.description}</p>
-
-        {/* Optional: Status / Deadline / Rollenanzeige */}
-        {/* <div className="text-sm text-gray-400 mt-2">Decision closes: {format(new Date(decision.deadline), 'PPPp')}</div> */}
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 overflow-auto">
@@ -123,7 +120,7 @@ export default function TeamDecisionDetail() {
               {criteria.map(c => (
                 <th key={c.id} className="border px-4 py-2">{c.name}</th>
               ))}
-              <th className="border px-4 py-2">Score</th>
+              <th className="border px-4 py-2">Gesamt</th>
             </tr>
           </thead>
           <tbody>
@@ -146,18 +143,18 @@ export default function TeamDecisionDetail() {
       </div>
 
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
-        <h3 className="text-xl font-semibold">💬 Comments</h3>
+        <h3 className="text-xl font-semibold">💬 Kommentare</h3>
 
         <form onSubmit={handleCommentSubmit} className="flex flex-col sm:flex-row gap-4">
           <input
             ref={inputRef}
             value={commentInput}
             onChange={e => setCommentInput(e.target.value)}
-            placeholder="Write a comment …"
+            placeholder="Kommentiere hier …"
             className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-900 dark:border-gray-600"
           />
           <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
-            {editingId ? '💾 Save' : '➕ Post'}
+            {editingId ? '💾 Speichern' : '➕ Posten'}
           </button>
         </form>
 
@@ -167,7 +164,7 @@ export default function TeamDecisionDetail() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="font-medium text-sm">
-                    {c.nickname ? `@${c.nickname}` : 'Anonymous'}
+                    {c.nickname ? `@${c.nickname}` : 'Anonym'}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">{c.text}</p>
                   <p className="text-xs text-gray-400">
@@ -177,8 +174,8 @@ export default function TeamDecisionDetail() {
 
                 {String(user?.id) === String(c.user_id) && (
                   <div className="flex gap-2 text-sm mt-1">
-                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Edit</button>
-                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Delete</button>
+                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Bearbeiten</button>
+                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Löschen</button>
                   </div>
                 )}
               </div>

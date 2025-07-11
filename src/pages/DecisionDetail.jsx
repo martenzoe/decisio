@@ -1,3 +1,4 @@
+// src/pages/DecisionDetail.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
@@ -12,15 +13,14 @@ export default function DecisionDetail() {
   const [error, setError] = useState(null)
   const inputRef = useRef(null)
 
-  const token = localStorage.getItem('token')
-  const { user } = useAuthStore()
+  const { user, token } = useAuthStore()
 
   useEffect(() => {
-    if (user && id) {
+    if (user && token && id) {
       fetchData()
       fetchComments()
     }
-  }, [user, id])
+  }, [user, token, id])
 
   useEffect(() => {
     if (editingId && inputRef.current) inputRef.current.focus()

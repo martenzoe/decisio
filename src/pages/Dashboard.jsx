@@ -4,27 +4,30 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 
 function Dashboard() {
-  const { user } = useAuthStore()
+  const navigate = useNavigate()
+  const { user, token } = useAuthStore() // ✅ Korrekt außerhalb von useEffect
+
   const [decisions, setDecisions] = useState([])
   const [filtered, setFiltered] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filter, setFilter] = useState('latest')
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchDecisions = async () => {
       try {
-        const token = localStorage.getItem('token')
+        if (!token) throw new Error('Kein gültiger Token verfügbar')
+        console.log('📦 Token im Dashboard:', token)
+
         const res = await fetch('http://localhost:3000/api/decision', {
           headers: { Authorization: `Bearer ${token}` },
         })
+
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidungen')
         if (!Array.isArray(data)) throw new Error('Ungültige Datenstruktur')
 
         const unique = Array.from(new Map(data.map(d => [d.id, d])).values())
-
         setDecisions(unique)
         setFiltered(unique)
       } catch (err) {
@@ -35,8 +38,9 @@ function Dashboard() {
         setLoading(false)
       }
     }
+
     fetchDecisions()
-  }, [])
+  }, [token])
 
   useEffect(() => {
     let result = [...decisions]
@@ -62,12 +66,15 @@ function Dashboard() {
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this decision?')) return
-    const token = localStorage.getItem('token')
-    await fetch(`http://localhost:3000/api/decision/${id}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    setDecisions(prev => prev.filter(d => d.id !== id))
+    try {
+      await fetch(`http://localhost:3000/api/decision/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setDecisions(prev => prev.filter(d => d.id !== id))
+    } catch (err) {
+      console.error('Löschen fehlgeschlagen:', err.message)
+    }
   }
 
   return (
