@@ -1,90 +1,37 @@
-// server/routes/ai.js
 import express from 'express'
 import verifyJWT from '../middleware/verifyJWT.js'
 
 const router = express.Router()
 
-/**
- * @swagger
- * tags:
- *   name: AI
- *   description: KI-gestützte Empfehlungen
- */
-
-/**
- * @swagger
- * /api/ai/recommendation:
- *   post:
- *     summary: Generiert Empfehlungen basierend auf Entscheidungskriterien
- *     tags: [AI]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - decisionName
- *               - description
- *               - options
- *               - criteria
- *             properties:
- *               decisionName:
- *                 type: string
- *               description:
- *                 type: string
- *               options:
- *                 type: array
- *                 items:
- *                   type: string
- *               criteria:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     name:
- *                       type: string
- *     responses:
- *       200:
- *         description: Empfehlungen generiert
- *       500:
- *         description: Fehler bei der KI-Antwort oder beim Parsing
- */
-
-
 router.post('/recommendation', verifyJWT, async (req, res) => {
   const { decisionName, description, options, criteria } = req.body
   const apiKey = process.env.OPENAI_API_KEY
 
+  if (!apiKey) return res.status(500).json({ error: 'Kein API-Key gesetzt' })
+
   const prompt = `
-Du bist ein Entscheidungscoach. Bewerte, wie sehr jede Option jedes Kriterium erfüllt (Skala 1–10) und gib jeweils eine Begründung.
+Du bist ein Entscheidungscoach. Bewerte jede Option zu jedem Kriterium (1–10) mit Begründung. Antworte ausschließlich im JSON-Format:
 
-### Entscheidung:
-${decisionName}
-
-### Beschreibung:
-${description}
-
-### Kriterien:
-${criteria.map(c => `- ${c.name}`).join('\n')}
-
-### Optionen:
-${options.map(o => `- ${o}`).join('\n')}
-
-### Format (nur JSON!)
 {
   "bewertungen": [
     {
-      "option": "Cloud Engineer",
+      "option": "OPTIONNAME",
       "bewertungen": [
-        { "kriterium": "Gehalt", "score": 9, "begründung": "Sehr gefragt und gut bezahlt." },
-        { "kriterium": "Work Life Balance", "score": 7, "begründung": "Je nach Unternehmen." }
+        { "kriterium": "KRITERIUMNAME", "score": ZAHL, "begründung": "TEXT" }
       ]
     }
   ]
-}`
+}
+
+Entscheidung: ${decisionName}
+Beschreibung: ${description}
+
+Kriterien:
+${criteria.map(c => `- ${c.name}`).join('\n')}
+
+Optionen:
+${options.map(o => `- ${o}`).join('\n')}
+`
 
   try {
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -96,17 +43,42 @@ ${options.map(o => `- ${o}`).join('\n')}
       body: JSON.stringify({
         model: 'gpt-4',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0 // deterministisch
+        temperature: 0
       })
     })
 
+    if (!openaiRes.ok) {
+      const errText = await openaiRes.text()
+      console.error('❌ OpenAI API Fehler:', errText)
+      return res.status(500).json({ error: 'GPT API Antwort fehlgeschlagen' })
+    }
+
     const result = await openaiRes.json()
     const raw = result.choices?.[0]?.message?.content?.trim()
+    if (!raw) throw new Error('GPT-Antwort leer')
+
+    console.log('📦 GPT Response:', raw)
+
     const parsed = JSON.parse(raw)
 
-    res.json({ recommendations: parsed.bewertungen })
+    const recommendations = parsed.bewertungen.map(entry => {
+      const option_index = options.findIndex(opt => opt === entry.option)
+      return {
+        option_index,
+        bewertungen: entry.bewertungen.map(b => {
+          const criterion_index = criteria.findIndex(c => c.name === b.kriterium)
+          return {
+            criterion_index,
+            value: b.score,
+            explanation: b.begründung
+          }
+        })
+      }
+    })
+
+    res.json({ recommendations })
   } catch (err) {
-    console.error('GPT Fehler:', err)
+    console.error('❌ GPT Fehler:', err.message)
     res.status(500).json({ error: 'Fehler bei GPT-Antwort oder Parsing' })
   }
 })

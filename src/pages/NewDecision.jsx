@@ -40,14 +40,20 @@ function NewDecision() {
       const gptResult = await getGPTRecommendation({ decisionName, description, options, criteria })
       const newEvaluations = {}
 
-      gptResult.forEach((result, i) => {
+      gptResult.forEach(entry => {
+        const optIdx = entry.option_index
+        if (optIdx === -1 || !options[optIdx]) return
+
         const row = {}
-        criteria.forEach((crit, j) => {
-          const match = result.bewertungen.find(b => b.kriterium === crit.name)
-          row[j] = match ? Math.round(match.score) : 0
-          row[`explanation_${j}`] = match?.begründung || ''
+        entry.bewertungen.forEach(b => {
+          const critIdx = b.criterion_index
+          if (critIdx === -1 || !criteria[critIdx]) return
+
+          row[critIdx] = Math.round(b.value)
+          row[`explanation_${critIdx}`] = b.explanation
         })
-        newEvaluations[i] = row
+
+        newEvaluations[optIdx] = row
       })
 
       setEvaluations(newEvaluations)
@@ -69,7 +75,6 @@ function NewDecision() {
 
     setLoading(true)
     try {
-      // Entscheidung anlegen
       const res = await fetch('/api/decision', {
         method: 'POST',
         headers: {
@@ -83,7 +88,6 @@ function NewDecision() {
       if (!res.ok) throw new Error(created.error || 'Fehler beim Erstellen')
       const decisionId = created.id
 
-      // Bewertungen vorbereiten (noch mit Indizes, Backend erwartet diese Struktur!)
       const evalArray = []
       options.forEach((_, optIdx) => {
         criteria.forEach((_, critIdx) => {
@@ -100,7 +104,6 @@ function NewDecision() {
         })
       })
 
-      // Alles zusammen per PUT aktualisieren
       await updateDecision(decisionId, token, {
         name: decisionName,
         description,
@@ -158,7 +161,6 @@ function NewDecision() {
                 const updated = [...options]
                 updated[i] = e.target.value
                 setOptions(updated)
-                updateEvaluations(updated, criteria)
               }} className="w-full border px-4 py-2 rounded mb-2" required />
             ))}
             <button type="button" onClick={() => {
@@ -176,13 +178,11 @@ function NewDecision() {
                   const updated = [...criteria]
                   updated[i].name = e.target.value
                   setCriteria(updated)
-                  updateEvaluations(options, updated)
                 }} className="flex-1 border px-3 py-2 rounded" required />
                 <input type="number" value={c.importance} onChange={(e) => {
                   const updated = [...criteria]
                   updated[i].importance = e.target.value
                   setCriteria(updated)
-                  updateEvaluations(options, updated)
                 }} className="w-20 border px-3 py-2 rounded" required />
               </div>
             ))}
