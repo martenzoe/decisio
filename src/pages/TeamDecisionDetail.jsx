@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { useAuthStore } from '../store/useAuthStore'
+import EvaluateTeamDecision from './EvaluateTeamDecision'
 
 export default function TeamDecisionDetail() {
   const { id } = useParams()
@@ -17,15 +18,6 @@ export default function TeamDecisionDetail() {
   const token = useAuthStore((s) => s.token)
   const { user } = useAuthStore()
 
-  // Logging jedes Rendern
-  console.log('🔁 Render TeamDecisionDetail')
-  console.log('👤 useAuthStore user:', user)
-  console.log('🔑 useAuthStore token:', token)
-  console.log('🆔 useParams id:', id)
-  console.log('🌍 data-State:', data)
-  console.log('🌍 pollTries:', pollTries)
-
-  // Robustere Initialisierung + Polling solange Daten fehlen
   useEffect(() => {
     if (user?.id && id && token) {
       setLoading(true)
@@ -35,7 +27,6 @@ export default function TeamDecisionDetail() {
     // eslint-disable-next-line
   }, [user?.id, id, token])
 
-  // Wiederhole das Nachladen, falls Daten fehlen (max. 4 Versuche)
   useEffect(() => {
     if (
       data &&
@@ -45,7 +36,6 @@ export default function TeamDecisionDetail() {
         !Array.isArray(data.criteria) || data.criteria.length === 0
       )
     ) {
-      console.log('🟠 Polling: Optionen oder Kriterien fehlen, erneutes Laden...')
       const timer = setTimeout(() => {
         setPollTries(t => t + 1)
         fetchData()
@@ -65,7 +55,6 @@ export default function TeamDecisionDetail() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()
-      console.log('📦 Detaildaten:', json)
       if (!res.ok || !json.decision) throw new Error(json.error || 'Keine Team-Entscheidung gefunden')
       setData(json)
     } catch (err) {
@@ -127,15 +116,32 @@ export default function TeamDecisionDetail() {
     if (res.ok) fetchComments()
   }
 
-  // Robust Defaults
-  const { decision, options = [], criteria = [], evaluations = [] } = data || {}
+  const { decision, options = [], criteria = [], evaluations = [], userRole } = data || {}
 
-  const getScore = (optionId) => {
-    const evals = evaluations.filter(e => e.option_id === optionId)
-    const total = evals.reduce((acc, e) => {
-      const crit = criteria.find(c => c.id === e.criterion_id)
-      return acc + ((crit?.importance ?? 0) * e.value) / 100
-    }, 0)
+  // Liefert für jede Option und Kriterium: Mittelwert aller Scores (über alle Teammitglieder)
+  function getMeanScore(optionId, criterionId) {
+    const relevant = evaluations.filter(
+      (e) => e.option_id === optionId && e.criterion_id === criterionId
+    )
+    if (!relevant.length) return null
+    const avg = relevant.reduce((sum, e) => sum + (Number(e.value) || 0), 0) / relevant.length
+    return Math.round(avg * 10) / 10
+  }
+
+  // Gesamtscore: Summe aller (MeanScore * Wichtigkeit)
+  function getTotalScore(optionId) {
+    if (!criteria.length) return '-'
+    let total = 0
+    let weightSum = 0
+    criteria.forEach((crit) => {
+      const avg = getMeanScore(optionId, crit.id)
+      const imp = Number(crit.importance) || 0
+      if (avg !== null) {
+        total += avg * imp
+        weightSum += imp
+      }
+    })
+    if (weightSum > 0) total = total / weightSum * 100
     return Math.round(total * 10) / 10
   }
 
@@ -164,13 +170,15 @@ export default function TeamDecisionDetail() {
         <p className="text-gray-600 dark:text-gray-300">{decision.description}</p>
       </div>
 
+
+
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 overflow-auto">
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
               <th className="border px-4 py-2">Option</th>
               {criteria.map(c => (
-                <th key={c.id} className="border px-4 py-2">{c.name}</th>
+                <th key={c.id} className="border px-4 py-2">{c.name} <span className="text-xs text-gray-400">({c.importance}%)</span></th>
               ))}
               <th className="border px-4 py-2">Gesamt</th>
             </tr>
@@ -180,14 +188,14 @@ export default function TeamDecisionDetail() {
               <tr key={o.id}>
                 <td className="border px-4 py-2">{o.name}</td>
                 {criteria.map(c => {
-                  const evalItem = evaluations.find(e => e.option_id === o.id && e.criterion_id === c.id)
+                  const avg = getMeanScore(o.id, c.id)
                   return (
                     <td key={c.id} className="border px-4 py-2 text-center">
-                      {evalItem ? evalItem.value : '-'}
+                      {avg !== null ? avg : '-'}
                     </td>
                   )
                 })}
-                <td className="border px-4 py-2 text-center font-semibold">{getScore(o.id)}</td>
+                <td className="border px-4 py-2 text-center font-semibold">{getTotalScore(o.id)}</td>
               </tr>
             ))}
           </tbody>

@@ -20,6 +20,7 @@ import Evaluation from './pages/Evaluation'
 import History from './pages/History'
 import DecisionDetail from './pages/DecisionDetail'
 import EditDecision from './pages/EditDecision'
+import EditTeamDecision from './pages/EditTeamDecision'   // <--- NEU
 import EvaluateDecision from './pages/EvaluateDecision'
 import Faq from './pages/Faq'
 import Kontakt from './pages/Kontakt'
@@ -32,7 +33,7 @@ import Invite from './pages/Invite'
 import TeamInvite from './pages/TeamInvite'
 import NotificationsPage from './pages/NotificationsPage'
 import TeamDecisionDetail from './pages/TeamDecisionDetail'
-import DecisionRouter from './pages/DecisionRouter' // ✅ hinzugefügt
+import DecisionRouter from './pages/DecisionRouter'
 
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
@@ -79,6 +80,7 @@ function App() {
 
         {/* 🔧 Weitere Detailseiten */}
         <Route path="/decision/:id/edit" element={<ProtectedRoute><MainLayout><EditDecision /></MainLayout></ProtectedRoute>} />
+        <Route path="/team-decision/:id/edit" element={<ProtectedRoute><MainLayout><EditTeamDecision /></MainLayout></ProtectedRoute>} /> {/* NEU */}
         <Route path="/decision/:id/evaluate" element={<ProtectedRoute><MainLayout><EvaluateDecision /></MainLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
         <Route path="/change-password" element={<ProtectedRoute><MainLayout><ChangePassword /></MainLayout></ProtectedRoute>} />

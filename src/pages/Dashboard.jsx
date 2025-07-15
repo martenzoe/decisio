@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/useAuthStore'
 
 function Dashboard() {
   const navigate = useNavigate()
-  const { user, token } = useAuthStore() // ✅ Korrekt außerhalb von useEffect
+  const { user, token } = useAuthStore()
 
   const [decisions, setDecisions] = useState([])
   const [filtered, setFiltered] = useState([])
@@ -17,21 +17,18 @@ function Dashboard() {
     const fetchDecisions = async () => {
       try {
         if (!token) throw new Error('Kein gültiger Token verfügbar')
-        console.log('📦 Token im Dashboard:', token)
-
         const res = await fetch('http://localhost:3000/api/decision', {
           headers: { Authorization: `Bearer ${token}` },
         })
-
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidungen')
         if (!Array.isArray(data)) throw new Error('Ungültige Datenstruktur')
 
+        // Unique by ID
         const unique = Array.from(new Map(data.map(d => [d.id, d])).values())
         setDecisions(unique)
         setFiltered(unique)
       } catch (err) {
-        console.error('Dashboard Fehler:', err.message)
         setDecisions([])
         setFiltered([])
       } finally {
@@ -44,13 +41,11 @@ function Dashboard() {
 
   useEffect(() => {
     let result = [...decisions]
-
     if (searchTerm) {
       result = result.filter(d =>
         d.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
-
     if (filter === 'manual') {
       result = result.filter(d => d.mode === 'manual')
     } else if (filter === 'ai') {
@@ -60,7 +55,6 @@ function Dashboard() {
     } else {
       result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
     }
-
     setFiltered(result)
   }, [searchTerm, filter, decisions])
 
@@ -72,9 +66,7 @@ function Dashboard() {
         headers: { Authorization: `Bearer ${token}` },
       })
       setDecisions(prev => prev.filter(d => d.id !== id))
-    } catch (err) {
-      console.error('Löschen fehlgeschlagen:', err.message)
-    }
+    } catch (err) { /* Fehler ignorieren */ }
   }
 
   return (
@@ -168,7 +160,11 @@ function Dashboard() {
                     Details
                   </button>
                   <button
-                    onClick={() => navigate(`/decision/${d.id}/edit`)}
+                    onClick={() =>
+                      d.type === 'team'
+                        ? navigate(`/team-decision/${d.id}/edit`)
+                        : navigate(`/decision/${d.id}/edit`)
+                    }
                     className="text-yellow-600 dark:text-yellow-400 hover:underline"
                   >
                     Edit
