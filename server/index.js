@@ -49,6 +49,15 @@ app.use(cors({
 
 app.use(express.json())
 
+// 🔒 Cache-Control für ALLE API-Routen deaktivieren
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.set('Pragma', 'no-cache')
+  res.set('Expires', '0')
+  res.set('Surrogate-Control', 'no-store')
+  next()
+})
+
 // ✅ Swagger Setup
 const swaggerOptions = {
   definition: {

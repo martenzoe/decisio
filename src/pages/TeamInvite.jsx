@@ -1,4 +1,3 @@
-// src/pages/TeamInvite.jsx
 import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { updateDecision } from '../api/decision'
@@ -19,18 +18,20 @@ function TeamInvite() {
   const [activateSuccess, setActivateSuccess] = useState(null)
   const [activateError, setActivateError] = useState(null)
 
+  // Entscheidungdetails für robustes Aktivieren
+  const [decisionDetails, setDecisionDetails] = useState(null)
+  const [detailsLoading, setDetailsLoading] = useState(false)
+
+  // Team-Mitglieder laden
   const fetchTeamMembers = async () => {
     setLoading(true)
     try {
       if (!token) throw new Error('Kein gültiger Token gefunden')
-
       const res = await fetch(`/api/team/team-members/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Fehler beim Laden')
-
       setTeamMembers(data)
     } catch (err) {
       setError(err.message)
@@ -39,8 +40,28 @@ function TeamInvite() {
     }
   }
 
+  // Entscheidung + Details laden für robusten PUT
+  const fetchDecisionDetails = async () => {
+    setDetailsLoading(true)
+    try {
+      if (!token) return
+      const res = await fetch(`/api/decision/${id}/details`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Details konnten nicht geladen werden')
+      setDecisionDetails(data)
+    } catch (err) {
+      setActivateError('Fehler beim Laden der Entscheidungsdetails: ' + err.message)
+    } finally {
+      setDetailsLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchTeamMembers()
+    fetchDecisionDetails()
+    // eslint-disable-next-line
   }, [id, token])
 
   const handleInvite = async () => {
@@ -50,7 +71,6 @@ function TeamInvite() {
 
     try {
       if (!token) throw new Error('Kein gültiger Token gefunden')
-
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: {
@@ -78,15 +98,33 @@ function TeamInvite() {
   const handleActivateDecision = async () => {
     setActivateError(null)
     setActivateSuccess(null)
+    if (detailsLoading) return
 
     try {
       if (!token) throw new Error('Kein gültiger Token gefunden')
+      if (!decisionDetails?.decision) throw new Error('Entscheidungsdaten fehlen')
+
+      // Fix: evaluations werden als INDEX übertragen!
+      const optionList = decisionDetails.options || []
+      const criterionList = decisionDetails.criteria || []
+      const mappedEvaluations = (decisionDetails.evaluations || []).map(e => ({
+        value: e.value,
+        explanation: e.explanation,
+        option_index: optionList.findIndex(o => o.id === e.option_id),
+        criterion_index: criterionList.findIndex(c => c.id === e.criterion_id)
+      }))
 
       await updateDecision(id, token, {
+        name: decisionDetails.decision.name,
+        description: decisionDetails.decision.description,
+        mode: decisionDetails.decision.mode,
         type: 'team',
-        options: [],
-        criteria: [],
-        evaluations: [],
+        options: optionList.map(o => ({ name: o.name })) || [],
+        criteria: criterionList.map(c => ({
+          name: c.name,
+          importance: Number(c.importance)
+        })) || [],
+        evaluations: mappedEvaluations
       })
 
       setActivateSuccess('Entscheidung wurde aktiviert.')
@@ -156,6 +194,7 @@ function TeamInvite() {
         <button
           onClick={handleActivateDecision}
           className="bg-green-600 text-white px-4 py-2 rounded"
+          disabled={detailsLoading}
         >
           Entscheidung aktivieren
         </button>

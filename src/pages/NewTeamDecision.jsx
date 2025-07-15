@@ -1,7 +1,14 @@
-// src/pages/NewTeamDecision.jsx
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
+
+// Hilfsfunktionen für Validierung
+function hasDuplicates(array) {
+  return new Set(array).size !== array.length
+}
+function isEmptyOrWhitespace(str) {
+  return !str || !str.trim()
+}
 
 function NewTeamDecision() {
   const [decisionName, setDecisionName] = useState('')
@@ -12,27 +19,123 @@ function NewTeamDecision() {
   const [criteria, setCriteria] = useState([{ name: '', importance: '' }])
   const [evaluations, setEvaluations] = useState({})
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const navigate = useNavigate()
   const token = useAuthStore((s) => s.token)
 
-  // Sicherheit: Kein Zugriff ohne Token
+  // Evaluationen initialisieren (immer nach Change von Option/Kriterien)
   useEffect(() => {
-    if (!token) {
-      console.warn('⚠️ Kein Token vorhanden – redirect zum Login')
-      navigate('/login')
-    }
-  }, [token, navigate])
-
-  const updateEvaluations = (opts, crits) => {
     const evals = {}
-    opts.forEach((_, i) => {
+    options.forEach((_, i) => {
       evals[i] = {}
-      crits.forEach((_, j) => {
+      criteria.forEach((_, j) => {
         evals[i][j] = ''
       })
     })
     setEvaluations(evals)
+  }, [options, criteria])
+
+  useEffect(() => {
+    if (!token) navigate('/login')
+  }, [token])
+
+  // 2-Step Submit
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+
+    // Grundvalidierung
+    if (!decisionName || !timer || options.some(o => !o) || criteria.some(c => !c.name || !c.importance)) {
+      setError('Bitte alle Felder ausfüllen.')
+      return
+    }
+    // Eindeutigkeit prüfen
+    const optionNames = options.map(o => typeof o === 'string' ? o.trim() : o?.name?.trim() || '')
+    const criterionNames = criteria.map(c => c.name.trim())
+    if (
+      optionNames.some(isEmptyOrWhitespace) ||
+      criterionNames.some(isEmptyOrWhitespace) ||
+      hasDuplicates(optionNames) ||
+      hasDuplicates(criterionNames)
+    ) {
+      setError('Optionen und Kriterien müssen eindeutig und ausgefüllt sein.')
+      return
+    }
+
+    setLoading(true)
+
+    try {
+      // 1. Team-Entscheidung anlegen (ohne Details)
+      const basePayload = {
+        name: decisionName,
+        description,
+        mode,
+        timer,
+        type: 'team'
+      }
+      const res = await fetch('/api/team-decisions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(basePayload)
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || 'Unbekannter Fehler')
+      const { decision } = result
+      if (!decision?.id) throw new Error('❌ Keine gültige Decision-ID erhalten')
+      const decisionId = decision.id
+
+      // 2. Details als PUT abspeichern
+      const evalArray = []
+      Object.entries(evaluations).forEach(([optIdx, critObj]) => {
+        Object.entries(critObj).forEach(([critIdx, value]) => {
+          if (value !== '') {
+            evalArray.push({
+              option_index: parseInt(optIdx),
+              criterion_index: parseInt(critIdx),
+              value: Number(value)
+              // explanation: kann bei Bedarf ergänzt werden
+            })
+          }
+        })
+      })
+      const optionsForBackend = options.map((o) =>
+        typeof o === 'string' ? { name: o } : o && o.name ? { name: o.name } : { name: '' }
+      )
+      const putPayload = {
+        name: decisionName,
+        description,
+        mode,
+        type: 'team',
+        options: optionsForBackend,
+        criteria: criteria.map((c) => ({
+          name: c.name,
+          importance: Number(c.importance)
+        })),
+        evaluations: evalArray
+      }
+      // Jetzt Details speichern (PUT)
+      const putRes = await fetch(`/api/decision/${decisionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(putPayload)
+      })
+      const putResult = await putRes.json()
+      if (!putRes.ok) throw new Error(putResult.error || 'Fehler beim Speichern der Details')
+
+      // Weiter zu Einladungen
+      navigate(`/team-invite/${decisionId}`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleOptionChange = (idx, value) => {
@@ -47,10 +150,6 @@ function NewTeamDecision() {
     setCriteria(updated)
   }
 
-  useEffect(() => {
-    updateEvaluations(options, criteria)
-  }, [options, criteria])
-
   const handleEvaluationChange = (optIdx, critIdx, value) => {
     setEvaluations((prev) => ({
       ...prev,
@@ -61,168 +160,62 @@ function NewTeamDecision() {
     }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    if (!decisionName || !timer || options.some(o => !o) || criteria.some(c => !c.name || !c.importance)) {
-      return alert('⚠️ Bitte alle Felder ausfüllen')
-    }
-
-    setLoading(true)
-    try {
-      const res = await fetch('/api/team-decisions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          name: decisionName,
-          description,
-          mode,
-          timer,
-          type: 'team'
-        })
-      })
-
-      const result = await res.json()
-      if (!res.ok) throw new Error(result.error || 'Unbekannter Fehler')
-
-      const { decision } = result
-      if (!decision?.id) throw new Error('❌ Keine gültige Decision-ID erhalten')
-
-      navigate(`/team-invite/${decision.id}`)
-    } catch (err) {
-      console.error('❌ Fehler beim Erstellen:', err.message)
-      alert(`❌ ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 py-12 px-4">
       <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 text-gray-800 dark:text-gray-100 shadow-2xl rounded-2xl p-8 space-y-10">
         <h1 className="text-3xl font-bold">Neue Team-Entscheidung</h1>
         <form onSubmit={handleSubmit} className="space-y-10">
-          {/* Allgemeine Infos */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <input
-              type="text"
-              value={decisionName}
-              onChange={(e) => setDecisionName(e.target.value)}
-              placeholder="Titel der Entscheidung"
-              className="p-3 border rounded-lg shadow-sm w-full bg-white dark:bg-neutral-700 dark:border-neutral-600"
-            />
-            <input
-              type="datetime-local"
-              value={timer}
-              onChange={(e) => setTimer(e.target.value)}
-              className="p-3 border rounded-lg shadow-sm w-full bg-white dark:bg-neutral-700 dark:border-neutral-600"
-            />
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="p-3 border rounded-lg shadow-sm w-full bg-white dark:bg-neutral-700 dark:border-neutral-600"
-            >
+            <input value={decisionName} onChange={(e) => setDecisionName(e.target.value)} placeholder="Titel" className="p-3 border rounded-lg" />
+            <input type="datetime-local" value={timer} onChange={(e) => setTimer(e.target.value)} className="p-3 border rounded-lg" />
+            <select value={mode} onChange={(e) => setMode(e.target.value)} className="p-3 border rounded-lg">
               <option value="manual">Manuell</option>
               <option value="ai">KI-Modus</option>
             </select>
           </div>
 
-          {/* Beschreibung */}
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Beschreibung der Entscheidung"
-            className="w-full p-3 border rounded-lg shadow-sm bg-white dark:bg-neutral-700 dark:border-neutral-600"
-            rows={4}
-          />
+          <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Beschreibung" className="w-full p-3 border rounded-lg" rows={3} />
 
           {/* Optionen */}
-          <div className="bg-neutral-100 dark:bg-neutral-700 p-4 rounded-xl shadow-inner">
-            <h2 className="text-lg font-semibold mb-3">Optionen</h2>
+          <div>
+            <h2 className="text-lg font-semibold">Optionen</h2>
             {options.map((opt, idx) => (
-              <div key={idx} className="flex gap-2 items-center mb-2">
-                <input
-                  type="text"
-                  value={opt}
-                  onChange={(e) => handleOptionChange(idx, e.target.value)}
-                  placeholder={`Option ${idx + 1}`}
-                  className="flex-1 p-2 border rounded bg-white dark:bg-neutral-800 dark:border-neutral-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => setOptions(options.filter((_, i) => i !== idx))}
-                  className="text-red-500 font-bold"
-                >
-                  X
-                </button>
+              <div key={idx} className="flex gap-2 mt-2">
+                <input value={typeof opt === 'string' ? opt : opt.name || ''} onChange={(e) => handleOptionChange(idx, e.target.value)} placeholder={`Option ${idx + 1}`} className="flex-1 p-2 border rounded" />
+                <button type="button" onClick={() => setOptions(options.filter((_, i) => i !== idx))}>X</button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => setOptions([...options, ''])}
-              className="mt-2 text-blue-600 dark:text-blue-400 font-medium"
-            >
-              + Option hinzufügen
-            </button>
+            <button type="button" onClick={() => setOptions([...options, ''])} className="mt-2 text-blue-600">+ Option</button>
           </div>
 
           {/* Kriterien */}
-          <div className="bg-neutral-100 dark:bg-neutral-700 p-4 rounded-xl shadow-inner">
-            <h2 className="text-lg font-semibold mb-3">Kriterien</h2>
-            {criteria.map((crit, idx) => (
-              <div key={idx} className="flex gap-2 items-center mb-2">
-                <input
-                  type="text"
-                  value={crit.name}
-                  onChange={(e) => handleCriterionChange(idx, 'name', e.target.value)}
-                  placeholder="Kriterium"
-                  className="flex-1 p-2 border rounded bg-white dark:bg-neutral-800 dark:border-neutral-600"
-                />
-                <input
-                  type="number"
-                  value={crit.importance}
-                  onChange={(e) => handleCriterionChange(idx, 'importance', e.target.value)}
-                  placeholder="Wichtigkeit (1–10)"
-                  className="w-32 p-2 border rounded bg-white dark:bg-neutral-800 dark:border-neutral-600"
-                />
-                <button
-                  type="button"
-                  onClick={() => setCriteria(criteria.filter((_, i) => i !== idx))}
-                  className="text-red-500 font-bold"
-                >
-                  X
-                </button>
+          <div>
+            <h2 className="text-lg font-semibold">Kriterien</h2>
+            {criteria.map((c, idx) => (
+              <div key={idx} className="flex gap-2 mt-2">
+                <input value={c.name} onChange={(e) => handleCriterionChange(idx, 'name', e.target.value)} placeholder="Kriterium" className="flex-1 p-2 border rounded" />
+                <input type="number" value={c.importance} onChange={(e) => handleCriterionChange(idx, 'importance', e.target.value)} placeholder="Wichtigkeit" className="w-28 p-2 border rounded" />
+                <button type="button" onClick={() => setCriteria(criteria.filter((_, i) => i !== idx))}>X</button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => setCriteria([...criteria, { name: '', importance: '' }])}
-              className="mt-2 text-blue-600 dark:text-blue-400 font-medium"
-            >
-              + Kriterium hinzufügen
-            </button>
+            <button type="button" onClick={() => setCriteria([...criteria, { name: '', importance: '' }])} className="mt-2 text-blue-600">+ Kriterium</button>
           </div>
 
-          {/* Bewertungsmatrix */}
-          {mode === 'manual' && criteria.length > 0 && options.length > 0 && (
+          {/* Bewertung */}
+          {mode === 'manual' && options.length && criteria.length > 0 && (
             <div className="overflow-x-auto">
               <h2 className="text-lg font-semibold mb-3">Bewertung</h2>
-              <table className="min-w-full border text-sm border-neutral-300 dark:border-neutral-600">
-                <thead className="bg-neutral-200 dark:bg-neutral-600 text-gray-800 dark:text-gray-100">
+              <table className="min-w-full border">
+                <thead>
                   <tr>
                     <th className="p-2 border">Option</th>
-                    {criteria.map((c, j) => (
-                      <th key={j} className="p-2 border">{c.name || `Kriterium ${j + 1}`}</th>
-                    ))}
+                    {criteria.map((c, j) => <th key={j} className="p-2 border">{c.name || `Kriterium ${j + 1}`}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {options.map((opt, i) => (
-                    <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-neutral-800' : 'bg-neutral-50 dark:bg-neutral-700'}>
-                      <td className="p-2 border font-medium">{opt}</td>
+                  {options.map((o, i) => (
+                    <tr key={i}>
+                      <td className="p-2 border">{typeof o === 'string' ? o : o.name || ''}</td>
                       {criteria.map((_, j) => (
                         <td key={j} className="p-2 border">
                           <input
@@ -231,7 +224,7 @@ function NewTeamDecision() {
                             max="10"
                             value={evaluations[i]?.[j] || ''}
                             onChange={(e) => handleEvaluationChange(i, j, e.target.value)}
-                            className="w-full p-1 border rounded text-center bg-white dark:bg-neutral-800 dark:border-neutral-600"
+                            className="w-full p-1 border rounded text-center"
                           />
                         </td>
                       ))}
@@ -242,13 +235,14 @@ function NewTeamDecision() {
             </div>
           )}
 
-          {/* Submit */}
+          {error && (
+            <div className="text-red-600 bg-red-50 border border-red-200 p-3 rounded">
+              {error}
+            </div>
+          )}
+
           <div className="text-right">
-            <button
-              type="submit"
-              disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-6 py-2 rounded-lg shadow font-semibold transition"
-            >
+            <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow font-semibold">
               {loading ? 'Speichern …' : 'Weiter zu Einladungen'}
             </button>
           </div>

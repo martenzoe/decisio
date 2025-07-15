@@ -6,6 +6,8 @@ import { useAuthStore } from '../store/useAuthStore'
 export default function TeamDecisionDetail() {
   const { id } = useParams()
   const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [pollTries, setPollTries] = useState(0)
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [editingId, setEditingId] = useState(null)
@@ -15,12 +17,43 @@ export default function TeamDecisionDetail() {
   const token = useAuthStore((s) => s.token)
   const { user } = useAuthStore()
 
+  // Logging jedes Rendern
+  console.log('🔁 Render TeamDecisionDetail')
+  console.log('👤 useAuthStore user:', user)
+  console.log('🔑 useAuthStore token:', token)
+  console.log('🆔 useParams id:', id)
+  console.log('🌍 data-State:', data)
+  console.log('🌍 pollTries:', pollTries)
+
+  // Robustere Initialisierung + Polling solange Daten fehlen
   useEffect(() => {
-    if (user && id) {
+    if (user?.id && id && token) {
+      setLoading(true)
       fetchData()
       fetchComments()
     }
-  }, [user, id])
+    // eslint-disable-next-line
+  }, [user?.id, id, token])
+
+  // Wiederhole das Nachladen, falls Daten fehlen (max. 4 Versuche)
+  useEffect(() => {
+    if (
+      data &&
+      pollTries < 4 &&
+      (
+        !Array.isArray(data.options) || data.options.length === 0 ||
+        !Array.isArray(data.criteria) || data.criteria.length === 0
+      )
+    ) {
+      console.log('🟠 Polling: Optionen oder Kriterien fehlen, erneutes Laden...')
+      const timer = setTimeout(() => {
+        setPollTries(t => t + 1)
+        fetchData()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    // eslint-disable-next-line
+  }, [data, pollTries])
 
   useEffect(() => {
     if (editingId && inputRef.current) inputRef.current.focus()
@@ -32,10 +65,13 @@ export default function TeamDecisionDetail() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()
+      console.log('📦 Detaildaten:', json)
       if (!res.ok || !json.decision) throw new Error(json.error || 'Keine Team-Entscheidung gefunden')
       setData(json)
     } catch (err) {
       setError(err.message)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -91,10 +127,8 @@ export default function TeamDecisionDetail() {
     if (res.ok) fetchComments()
   }
 
-  if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
-  if (!user || !data) return <div className="text-gray-400 text-center mt-10">⏳ Team-Entscheidung wird geladen …</div>
-
-  const { decision, options = [], criteria = [], evaluations = [] } = data
+  // Robust Defaults
+  const { decision, options = [], criteria = [], evaluations = [] } = data || {}
 
   const getScore = (optionId) => {
     const evals = evaluations.filter(e => e.option_id === optionId)
@@ -105,10 +139,28 @@ export default function TeamDecisionDetail() {
     return Math.round(total * 10) / 10
   }
 
+  if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
+  if (!user || loading) return <div className="text-gray-400 text-center mt-10">⏳ Team-Entscheidung wird geladen …</div>
+  if (!decision) return <div className="text-red-500 text-center mt-10">Entscheidung nicht gefunden.</div>
+  if (
+    (options.length === 0 || criteria.length === 0) &&
+    pollTries >= 4
+  ) {
+    return (
+      <div className="text-yellow-600 text-center mt-10">
+        Optionen oder Kriterien konnten nicht geladen werden.<br />
+        Bitte aktualisiere die Seite oder probiere es später erneut.<br />
+        <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded" onClick={fetchData}>
+          Erneut versuchen
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-8 text-gray-900 dark:text-gray-100">
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">{decision.title}</h2>
+        <h2 className="text-2xl font-bold mb-2">{decision.name}</h2>
         <p className="text-gray-600 dark:text-gray-300">{decision.description}</p>
       </div>
 
@@ -144,7 +196,6 @@ export default function TeamDecisionDetail() {
 
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
         <h3 className="text-xl font-semibold">💬 Kommentare</h3>
-
         <form onSubmit={handleCommentSubmit} className="flex flex-col sm:flex-row gap-4">
           <input
             ref={inputRef}
@@ -157,7 +208,6 @@ export default function TeamDecisionDetail() {
             {editingId ? '💾 Speichern' : '➕ Posten'}
           </button>
         </form>
-
         <div className="space-y-4">
           {comments.map(c => (
             <div key={c.id} className="border-t border-gray-200 dark:border-gray-600 pt-4">
@@ -171,7 +221,6 @@ export default function TeamDecisionDetail() {
                     {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
                   </p>
                 </div>
-
                 {String(user?.id) === String(c.user_id) && (
                   <div className="flex gap-2 text-sm mt-1">
                     <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Bearbeiten</button>

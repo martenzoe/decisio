@@ -29,8 +29,10 @@ import Profile from './pages/Profile'
 import ChangePassword from './pages/ChangePassword'
 import NewTeamDecision from './pages/NewTeamDecision'
 import Invite from './pages/Invite'
-import TeamInvite from './pages/TeamInvite' // ✅ wieder hinzugefügt
+import TeamInvite from './pages/TeamInvite'
 import NotificationsPage from './pages/NotificationsPage'
+import TeamDecisionDetail from './pages/TeamDecisionDetail'
+import DecisionRouter from './pages/DecisionRouter' // ✅ hinzugefügt
 
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
@@ -67,7 +69,15 @@ function App() {
         <Route path="/team-invite/:id" element={<ProtectedRoute><MainLayout><TeamInvite /></MainLayout></ProtectedRoute>} />
         <Route path="/evaluation" element={<ProtectedRoute><MainLayout><Evaluation /></MainLayout></ProtectedRoute>} />
         <Route path="/history" element={<ProtectedRoute><MainLayout><History /></MainLayout></ProtectedRoute>} />
-        <Route path="/decision/:id" element={<ProtectedRoute><MainLayout><DecisionDetail /></MainLayout></ProtectedRoute>} />
+
+        {/* 🧠 Entscheidungs-Router entscheidet zwischen Einzel- oder Teamentscheidung */}
+        <Route path="/decision/:id" element={<ProtectedRoute><MainLayout><DecisionRouter /></MainLayout></ProtectedRoute>} />
+
+        {/* 🔎 Zielseiten für den Router */}
+        <Route path="/single-decision/:id" element={<ProtectedRoute><MainLayout><DecisionDetail /></MainLayout></ProtectedRoute>} />
+        <Route path="/team-decision/:id" element={<ProtectedRoute><MainLayout><TeamDecisionDetail /></MainLayout></ProtectedRoute>} />
+
+        {/* 🔧 Weitere Detailseiten */}
         <Route path="/decision/:id/edit" element={<ProtectedRoute><MainLayout><EditDecision /></MainLayout></ProtectedRoute>} />
         <Route path="/decision/:id/evaluate" element={<ProtectedRoute><MainLayout><EvaluateDecision /></MainLayout></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><MainLayout><Profile /></MainLayout></ProtectedRoute>} />
