@@ -28,7 +28,8 @@ const allowedOrigins = [
   'https://decisiofrontend-git-main-martenzoes-projects.vercel.app',
   'https://decisiofrontend-5jdba6sfe-martenzoes-projects.vercel.app',
   'https://decisio-two.vercel.app',
-  'https://decisio.vercel.app'
+  'https://decisio.vercel.app',
+  'https://decisio-o1r6cl1ri-martenzoes-projects.vercel.app'
 ]
 
 app.use(cors({
