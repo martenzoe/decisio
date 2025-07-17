@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { useAuthStore } from '../store/useAuthStore'
-import EvaluateTeamDecision from './EvaluateTeamDecision'
 
 export default function TeamDecisionDetail() {
   const { id } = useParams()
@@ -14,7 +13,6 @@ export default function TeamDecisionDetail() {
   const [editingId, setEditingId] = useState(null)
   const [error, setError] = useState(null)
   const inputRef = useRef(null)
-
   const token = useAuthStore((s) => s.token)
   const { user } = useAuthStore()
 
@@ -71,9 +69,7 @@ export default function TeamDecisionDetail() {
       })
       const json = await res.json()
       setComments(Array.isArray(json) ? json : [])
-    } catch (err) {
-      console.error('❌ Fehler beim Laden der Kommentare:', err)
-    }
+    } catch (err) { }
   }
 
   async function handleCommentSubmit(e) {
@@ -116,9 +112,37 @@ export default function TeamDecisionDetail() {
     if (res.ok) fetchComments()
   }
 
-  const { decision, options = [], criteria = [], evaluations = [], userRole } = data || {}
+  // ==== Team- & Bewertungslogik ====
+  const {
+    decision,
+    options = [],
+    criteria = [],
+    evaluations = [],
+    weightsByUser = {},
+    teamMembers = []
+  } = data || {}
 
-  // Liefert für jede Option und Kriterium: Mittelwert aller Scores (über alle Teammitglieder)
+  // Team-Gewichtungen: Mittelwert je Kriterium, Fallback zu importance
+  function getMeanTeamWeights() {
+    const sum = {}
+    const count = {}
+    Object.values(weightsByUser).forEach(wArr => {
+      wArr.forEach(w => {
+        sum[w.criterion_id] = (sum[w.criterion_id] || 0) + Number(w.weight)
+        count[w.criterion_id] = (count[w.criterion_id] || 0) + 1
+      })
+    })
+    const result = {}
+    criteria.forEach(c => {
+      result[c.id] = count[c.id]
+        ? Math.round((sum[c.id] / count[c.id]) * 10) / 10
+        : (Number(c.importance) || 0)
+    })
+    return result
+  }
+  const meanTeamWeights = getMeanTeamWeights()
+
+  // Durchschnitt pro Feld (alle User)
   function getMeanScore(optionId, criterionId) {
     const relevant = evaluations.filter(
       (e) => e.option_id === optionId && e.criterion_id === criterionId
@@ -128,34 +152,64 @@ export default function TeamDecisionDetail() {
     return Math.round(avg * 10) / 10
   }
 
-  // Gesamtscore: Summe aller (MeanScore * Wichtigkeit)
-  function getTotalScore(optionId) {
+  // Team-Durchschnitt als gewichteter Mittelwert aller User
+  function getTeamWeightedScore(optionId, weightsMap) {
     if (!criteria.length) return '-'
-    let total = 0
-    let weightSum = 0
-    criteria.forEach((crit) => {
-      const avg = getMeanScore(optionId, crit.id)
-      const imp = Number(crit.importance) || 0
-      if (avg !== null) {
-        total += avg * imp
-        weightSum += imp
+    // Für jede Bewertung, gruppiert nach User, berechne den gewichteten Schnitt
+    const byUser = {}
+    evaluations.forEach(e => {
+      if (e.option_id === optionId) {
+        if (!byUser[e.user_id]) byUser[e.user_id] = {}
+        byUser[e.user_id][e.criterion_id] = Number(e.value)
       }
     })
-    if (weightSum > 0) total = total / weightSum * 100
-    return Math.round(total * 10) / 10
+    // Jeder User-Score: gewichtet nach weightsMap
+    const userScores = Object.values(byUser).map(critVals => {
+      let total = 0
+      let weightSum = 0
+      criteria.forEach(crit => {
+        const val = critVals[crit.id]
+        const weight = Number(weightsMap[crit.id]) || 0
+        if (typeof val === 'number' && weight > 0) {
+          total += val * weight
+          weightSum += weight
+        }
+      })
+      if (weightSum > 0) return total / weightSum * 100
+      return null
+    }).filter(x => x !== null)
+    if (!userScores.length) return 0
+    // Jetzt Mittelwert aller gewichteten User-Scores
+    const avg = userScores.reduce((sum, s) => sum + s, 0) / userScores.length
+    return Math.round(avg * 10) / 10
   }
 
+  // Wer hat abgestimmt (mind. 1 Bewertung)?
+  function getVoters() {
+    const votedMap = {}
+    evaluations.forEach(e => {
+      if (e && e.user_id) votedMap[String(e.user_id)] = true
+    })
+    return teamMembers.map(m => ({
+      ...m,
+      voted: !!votedMap[String(m.user_id)]
+    }))
+  }
+  const teamWithStatus = getVoters()
+
+  // ==== Render ====
   if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
   if (!user || loading) return <div className="text-gray-400 text-center mt-10">⏳ Team-Entscheidung wird geladen …</div>
   if (!decision) return <div className="text-red-500 text-center mt-10">Entscheidung nicht gefunden.</div>
+
   if (
     (options.length === 0 || criteria.length === 0) &&
     pollTries >= 4
   ) {
     return (
-      <div className="text-yellow-600 text-center mt-10">
-        Optionen oder Kriterien konnten nicht geladen werden.<br />
-        Bitte aktualisiere die Seite oder probiere es später erneut.<br />
+      <div className="text-yellow-700 bg-yellow-50 border border-yellow-300 max-w-xl mx-auto mt-10 p-6 rounded-xl text-center">
+        Optionen oder Kriterien wurden noch nicht angelegt.<br />
+        <span className="text-sm text-gray-500">Sobald mindestens eine Option und ein Kriterium angelegt sind, erscheint hier die Auswertung.</span><br />
         <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded" onClick={fetchData}>
           Erneut versuchen
         </button>
@@ -165,22 +219,56 @@ export default function TeamDecisionDetail() {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-8 text-gray-900 dark:text-gray-100">
+      {/* TEAM + Status */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 mb-4">
+        <h3 className="text-lg font-bold mb-2">Team & Status</h3>
+        <div className="flex flex-wrap gap-6">
+          {teamWithStatus.length === 0 ? (
+            <span className="text-gray-400">Keine Teammitglieder gefunden.</span>
+          ) : (
+            teamWithStatus.map(m => (
+              <div
+                key={m.user_id}
+                className={`flex items-center px-4 py-2 rounded-lg shadow-sm border ${m.voted ? 'bg-green-100 dark:bg-green-900 border-green-400' : 'bg-yellow-50 dark:bg-yellow-900 border-yellow-400'}`}
+                style={{ minWidth: 220 }}
+              >
+                <span className="text-2xl mr-2">{m.voted ? '✅' : '⏳'}</span>
+                <div>
+                  <span className="font-semibold">{m.users?.nickname || m.email || 'Unbekannt'}</span>
+                  <div className="text-xs text-gray-500">
+                    Rolle: {m.role}
+                    {m.voted
+                      ? <span className="ml-2 text-green-700">Abgestimmt</span>
+                      : <span className="ml-2 text-yellow-700">Ausstehend</span>}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Entscheidungstitel & Beschreibung */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6">
         <h2 className="text-2xl font-bold mb-2">{decision.name}</h2>
         <p className="text-gray-600 dark:text-gray-300">{decision.description}</p>
       </div>
 
-
-
+      {/* Bewertungs-Tabelle */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 overflow-auto">
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
               <th className="border px-4 py-2">Option</th>
               {criteria.map(c => (
-                <th key={c.id} className="border px-4 py-2">{c.name} <span className="text-xs text-gray-400">({c.importance}%)</span></th>
+                <th key={c.id} className="border px-4 py-2">
+                  {c.name}
+                  <span className="text-xs text-gray-400">
+                    {meanTeamWeights[c.id] ? ` (Team: ${meanTeamWeights[c.id]})` : ''}
+                  </span>
+                </th>
               ))}
-              <th className="border px-4 py-2">Gesamt</th>
+              <th className="border px-4 py-2">Team-Ergebnis</th>
             </tr>
           </thead>
           <tbody>
@@ -195,13 +283,22 @@ export default function TeamDecisionDetail() {
                     </td>
                   )
                 })}
-                <td className="border px-4 py-2 text-center font-semibold">{getTotalScore(o.id)}</td>
+                <td className="border px-4 py-2 text-center font-semibold">
+                  {Object.keys(meanTeamWeights).length
+                    ? getTeamWeightedScore(o.id, meanTeamWeights)
+                    : <span className="text-gray-400">-</span>}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+        <div className="text-xs text-gray-400 mt-2">
+          Die Gewichtung (in Klammern) ist der Team-Durchschnitt oder die voreingestellte Gewichtung.<br />
+          Die Ergebnisse sind für alle Teammitglieder identisch. Änderungen gehen nur über die Bewertungsmaske.
+        </div>
       </div>
 
+      {/* Kommentare */}
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
         <h3 className="text-xl font-semibold">💬 Kommentare</h3>
         <form onSubmit={handleCommentSubmit} className="flex flex-col sm:flex-row gap-4">

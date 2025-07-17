@@ -7,7 +7,7 @@ export default function EvaluateTeamDecision({
   criteria,
   existingEvaluations,
   userRole,
-  onEvaluationsSaved
+  onEvaluationsSaved,
 }) {
   const { user, token } = useAuthStore()
   const [evaluations, setEvaluations] = useState([])
@@ -15,15 +15,26 @@ export default function EvaluateTeamDecision({
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
-  // Init: Fülle Matrix mit bestehenden Bewertungen (nur für aktuellen User)
+  // Filter nur eigene Bewertungen ODER leeres Grid bauen
   useEffect(() => {
-    if (user && existingEvaluations) {
-      const userEvals = existingEvaluations.filter(e => String(e.user_id) === String(user.id))
+    if (!user) return
+    let userEvals = []
+    if (Array.isArray(existingEvaluations)) {
+      userEvals = existingEvaluations.filter(e => String(e.user_id) === String(user.id))
+    }
+    if (userEvals.length === 0) {
+      const blank = []
+      options.forEach(o => {
+        criteria.forEach(c => {
+          blank.push({ option_id: o.id, criterion_id: c.id, value: '' })
+        })
+      })
+      setEvaluations(blank)
+    } else {
       setEvaluations(userEvals)
     }
-  }, [user, existingEvaluations])
+  }, [user, existingEvaluations, options, criteria])
 
-  // Bewertung für Option × Kriterium (vom User)
   function getValue(optionId, criterionId) {
     const entry = evaluations.find(e => e.option_id === optionId && e.criterion_id === criterionId)
     return entry ? entry.value : ''
@@ -33,19 +44,16 @@ export default function EvaluateTeamDecision({
     setEvaluations(evals => {
       const idx = evals.findIndex(e => e.option_id === optionId && e.criterion_id === criterionId)
       if (idx > -1) {
-        // Update
         const copy = [...evals]
         copy[idx] = { ...copy[idx], value }
         return copy
       } else {
-        // Insert
         return [...evals, { option_id: optionId, criterion_id: criterionId, value }]
       }
     })
     setSuccess(false)
   }
 
-  // Speichern an Server
   async function saveAll() {
     setSaving(true)
     setError(null)
@@ -54,15 +62,17 @@ export default function EvaluateTeamDecision({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          evaluations: evaluations.map(e => ({
-            option_id: e.option_id,
-            criterion_id: e.criterion_id,
-            value: Number(e.value)
-          }))
-        })
+          evaluations: evaluations
+            .filter(e => e.value !== '' && !isNaN(Number(e.value)))
+            .map(e => ({
+              option_id: e.option_id,
+              criterion_id: e.criterion_id,
+              value: Number(e.value),
+            })),
+        }),
       })
       if (!res.ok) throw new Error('Konnte nicht speichern.')
       setSuccess(true)
@@ -74,8 +84,8 @@ export default function EvaluateTeamDecision({
     }
   }
 
-  // --- Rollenlogik ---
-  const canEdit = ['owner', 'admin', 'editor'].includes(userRole)
+  // ***Korrekt: Jeder außer Viewer darf bewerten***
+  const canEdit = userRole !== 'viewer'
   if (!canEdit) {
     return (
       <div className="text-gray-500 my-8">
@@ -84,7 +94,6 @@ export default function EvaluateTeamDecision({
     )
   }
 
-  // --- Render ---
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8">
       <h3 className="text-lg font-bold mb-2">Deine Bewertung</h3>
@@ -92,17 +101,19 @@ export default function EvaluateTeamDecision({
         <thead>
           <tr>
             <th className="border px-2 py-1">Option</th>
-            {criteria.map(c => (
-              <th key={c.id} className="border px-2 py-1">{c.name}</th>
+            {criteria.map((c, idx) => (
+              <th key={c.id || `${c.name}-${idx}`} className="border px-2 py-1">
+                {c.name}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {options.map(o => (
-            <tr key={o.id}>
+          {options.map((o, optIdx) => (
+            <tr key={o.id || `${o.name}-${optIdx}`}>
               <td className="border px-2 py-1">{o.name}</td>
-              {criteria.map(c => (
-                <td key={c.id} className="border px-2 py-1">
+              {criteria.map((c, critIdx) => (
+                <td key={c.id || `${c.name}-${critIdx}`} className="border px-2 py-1">
                   <input
                     type="number"
                     min="0"
@@ -112,6 +123,7 @@ export default function EvaluateTeamDecision({
                     value={getValue(o.id, c.id)}
                     onChange={e => setValue(o.id, c.id, e.target.value)}
                     className="w-16 p-1 border rounded"
+                    aria-label={`Bewertung für ${o.name} nach ${c.name}`}
                   />
                 </td>
               ))}

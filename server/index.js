@@ -12,8 +12,8 @@ import decisionRoutes from './routes/decisions.js'
 import teamRoutes from './routes/team.js'
 import teamDecisionRoutes from './routes/teamDecision.js'
 import userRoutes from './routes/users.js'
-import notificationsRoutes from './routes/notifications.js' // ✅ Notification-Route ergänzt
-import teamEvaluationsRoutes from './routes/teamEvaluations.js'
+import notificationsRoutes from './routes/notifications.js'
+// import teamEvaluationsRoutes from './routes/teamEvaluations.js' // ENTFERNT
 
 dotenv.config()
 
@@ -96,7 +96,7 @@ app.use('/api/comments', commentsRouter)
 app.use('/api/team', teamRoutes)
 app.use('/api/team-decisions', teamDecisionRoutes)
 app.use('/api/notifications', notificationsRoutes) // ✅ NEU
-app.use('/api/team-evaluations', teamEvaluationsRoutes)
+// app.use('/api/team-evaluations', teamEvaluationsRoutes) // ENTFERNT
 
 // ✅ Test-Route
 app.get('/', (req, res) => {

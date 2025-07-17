@@ -50,23 +50,18 @@ router.post('/', verifyJWT, async (req, res) => {
   }
 })
 
-// 🔄 Entscheidung + Details aktualisieren (robust, indexbasiert)
+// 🔄 Entscheidung + Details aktualisieren (optimiert)
 router.put('/:id', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
-  const { name, description, mode, type, options, criteria, evaluations } = req.body
+  const { name, description = '', mode = 'manual', type = 'private', options = [], criteria = [] } = req.body
 
-  if (
-    !name || !description || !mode || !type ||
-    !Array.isArray(options) || options.length === 0 ||
-    !Array.isArray(criteria) || criteria.length === 0
-  ) {
-    return res.status(400).json({
-      error: 'Name, Beschreibung, Optionen und Kriterien dürfen nicht leer sein'
-    })
+  if (!name) {
+    return res.status(400).json({ error: 'Name (Titel) darf nicht leer sein' })
   }
 
   try {
+    // Entscheidung aktualisieren
     const { error: updateError } = await supabase
       .from('decisions')
       .update({ name, description, mode, type })
@@ -74,77 +69,135 @@ router.put('/:id', verifyJWT, async (req, res) => {
       .eq('user_id', user_id)
     if (updateError) throw updateError
 
-    await supabase.from('options').delete().eq('decision_id', decision_id)
-    const optInsert = options.map(o => ({
-      id: crypto.randomUUID(),
-      name: o.name,
-      decision_id
-    }))
-    const { data: optData, error: optError } = await supabase.from('options').insert(optInsert).select()
-    if (optError) throw optError
+    // Optionen synchronisieren
+    const { data: oldOptions, error: optFetchErr } = await supabase
+      .from('options')
+      .select('*')
+      .eq('decision_id', decision_id)
+    if (optFetchErr) throw optFetchErr
 
-    await supabase.from('criteria').delete().eq('decision_id', decision_id)
-    const critInsert = criteria.map(c => ({
-      id: crypto.randomUUID(),
-      name: c.name,
-      importance: Number(c.importance),
-      decision_id
-    }))
-    const { data: critData, error: critError } = await supabase.from('criteria').insert(critInsert).select()
-    if (critError) throw critError
+    const frontendOptNames = options.map(o => o.name.trim().toLowerCase())
+    const oldOptNames = oldOptions.map(o => o.name.trim().toLowerCase())
 
-    if (Array.isArray(evaluations)) {
-      await supabase.from('evaluations').delete().eq('decision_id', decision_id)
-      const evalInsert = evaluations.map(e => {
-        const option_id = e.option_id || optData?.[e.option_index]?.id
-        const criterion_id = e.criterion_id || critData?.[e.criterion_index]?.id
-        if (!option_id || !criterion_id) return null
-        return {
-          id: crypto.randomUUID(),
-          decision_id,
-          option_id,
-          criterion_id,
-          value: Number(e.value),
-          explanation: e.explanation || null
-        }
-      }).filter(Boolean)
-      if (evalInsert.length > 0) {
-        const { error: evalError } = await supabase.from('evaluations').insert(evalInsert)
-        if (evalError) throw evalError
+    const toDeleteOpts = oldOptions.filter(
+      o => !frontendOptNames.includes(o.name.trim().toLowerCase())
+    )
+    const toAddOpts = options.filter(
+      o => !oldOptNames.includes(o.name.trim().toLowerCase())
+    )
+    // Lösche alte Optionen (inkl. Bewertungen)
+    for (const o of toDeleteOpts) {
+      await supabase.from('evaluations').delete().eq('option_id', o.id)
+      await supabase.from('options').delete().eq('id', o.id)
+    }
+    // Füge neue Optionen ein
+    if (toAddOpts.length) {
+      const inserts = toAddOpts.map(o => ({
+        id: crypto.randomUUID(),
+        name: o.name.trim(),
+        decision_id
+      }))
+      const { error: optError } = await supabase.from('options').insert(inserts)
+      if (optError) throw optError
+    }
+
+    // Kriterien synchronisieren
+    const { data: oldCriteria, error: critFetchErr } = await supabase
+      .from('criteria')
+      .select('*')
+      .eq('decision_id', decision_id)
+    if (critFetchErr) throw critFetchErr
+
+    const frontendCritNames = criteria.map(c => c.name.trim().toLowerCase())
+    const oldCritNames = oldCriteria.map(c => c.name.trim().toLowerCase())
+
+    const toDeleteCrit = oldCriteria.filter(
+      c => !frontendCritNames.includes(c.name.trim().toLowerCase())
+    )
+    const toAddCrit = criteria.filter(
+      c => !oldCritNames.includes(c.name.trim().toLowerCase())
+    )
+    // Lösche alte Kriterien (inkl. Bewertungen & Gewichte)
+    for (const c of toDeleteCrit) {
+      await supabase.from('evaluations').delete().eq('criterion_id', c.id)
+      await supabase.from('criterion_weights').delete().eq('criterion_id', c.id)
+      await supabase.from('criteria').delete().eq('id', c.id)
+    }
+    // Füge neue Kriterien ein
+    if (toAddCrit.length) {
+      const inserts = toAddCrit.map(c => ({
+        id: crypto.randomUUID(),
+        name: c.name.trim(),
+        importance: typeof c.importance === 'number' ? c.importance : (c.importance ? Number(c.importance) : 0),
+        decision_id
+      }))
+      const { error: critError } = await supabase.from('criteria').insert(inserts)
+      if (critError) throw critError
+    }
+    // Update bestehende Kriterien (z.B. importance)
+    for (const c of criteria) {
+      const old = oldCriteria.find(oc => oc.name.trim().toLowerCase() === c.name.trim().toLowerCase())
+      if (old) {
+        await supabase.from('criteria').update({
+          importance: typeof c.importance === 'number' ? c.importance : (c.importance ? Number(c.importance) : 0)
+        }).eq('id', old.id)
       }
     }
 
-    res.json({ message: 'Entscheidung inkl. Optionen, Kriterien & Bewertungen aktualisiert' })
+    res.json({ message: 'Entscheidung inkl. Optionen & Kriterien aktualisiert' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
-// 🗑️ Entscheidung löschen
+// 🗑️ Entscheidung löschen (Solo & Team, nur Owner/Admin)
 router.delete('/:id', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
+
   try {
+    const { data: decision, error: findErr } = await supabase
+      .from('decisions')
+      .select('*')
+      .eq('id', decision_id)
+      .single()
+    if (findErr || !decision) return res.status(404).json({ error: 'Entscheidung nicht gefunden' })
+
+    let canDelete = false
+    if (decision.type === 'team') {
+      const { data: member } = await supabase
+        .from('team_members')
+        .select('role')
+        .eq('decision_id', decision_id)
+        .eq('user_id', user_id)
+        .maybeSingle()
+      canDelete = (decision.user_id === user_id) ||
+                  (member && ['owner', 'admin'].includes(member.role))
+    } else {
+      canDelete = (decision.user_id === user_id)
+    }
+    if (!canDelete) {
+      return res.status(403).json({ error: 'Kein Löschrecht für diese Entscheidung' })
+    }
     await supabase.from('evaluations').delete().eq('decision_id', decision_id)
+    await supabase.from('criterion_weights').delete().eq('decision_id', decision_id)
     await supabase.from('options').delete().eq('decision_id', decision_id)
     await supabase.from('criteria').delete().eq('decision_id', decision_id)
     await supabase.from('comments').delete().eq('decision_id', decision_id)
     await supabase.from('team_members').delete().eq('decision_id', decision_id)
-
+    await supabase.from('team_decisions').delete().eq('decision_id', decision_id)
     const { error } = await supabase
       .from('decisions')
       .delete()
       .eq('id', decision_id)
-      .eq('user_id', user_id)
-
     if (error) throw error
-    res.json({ message: 'Entscheidung gelöscht' })
+    res.json({ message: 'Entscheidung + alle Daten wurden gelöscht' })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
 })
 
-// 📄 Entscheidung + Details abrufen (Solo & Team!) – liefert jetzt auch userRole für Team-Entscheidungen
+// 📄 Entscheidung + Details abrufen – erweitert um teamMembers
 router.get('/:id/details', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
@@ -198,7 +251,48 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
       .select('*')
       .eq('decision_id', decision_id)
 
-    res.json({ decision, options, criteria, evaluations, userRole })
+    const { data: allWeights } = await supabase
+      .from('criterion_weights')
+      .select('user_id, criterion_id, weight')
+      .eq('decision_id', decision_id)
+
+    const weightsByUser = {}
+    if (Array.isArray(allWeights)) {
+      allWeights.forEach(w => {
+        if (!weightsByUser[w.user_id]) weightsByUser[w.user_id] = []
+        weightsByUser[w.user_id].push({ criterion_id: w.criterion_id, weight: w.weight })
+      })
+    }
+
+    // 🚀 Teammitglieder laden
+    const { data: teamMembers, error: teamError } = await supabase
+      .from('team_members')
+      .select(`
+        id,
+        user_id,
+        role,
+        accepted,
+        users!team_members_user_id_fkey (
+          nickname,
+          avatar_url
+        )
+      `)
+      .eq('decision_id', decision_id)
+
+    if (teamError) {
+      console.error('Fehler beim Laden der Teammitglieder:', teamError)
+      return res.status(500).json({ error: 'Fehler beim Laden der Teammitglieder' })
+    }
+
+    res.json({
+      decision,
+      options,
+      criteria,
+      evaluations,
+      userRole,
+      weightsByUser,
+      teamMembers
+    })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -244,15 +338,13 @@ router.get('/:id/type', verifyJWT, async (req, res) => {
   }
 })
 
-// NEU: Einzel-Bewertungen für Team-Entscheidung speichern (pro User, mit Rollen-Check)
+// 🧮 Einzel-Bewertungen speichern
 router.post('/:id/evaluate', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
   const { evaluations } = req.body
 
-  // --- Rollenprüfung: ---
   let userRole = 'owner'
-  // Entscheidung laden
   const { data: decision, error: decisionErr } = await supabase
     .from('decisions')
     .select('*')
@@ -264,7 +356,6 @@ router.post('/:id/evaluate', verifyJWT, async (req, res) => {
   }
 
   if (decision.type === 'team') {
-    // Rolle aus team_members holen (accepted)
     const { data: member } = await supabase
       .from('team_members')
       .select('role, accepted')
@@ -277,7 +368,6 @@ router.post('/:id/evaluate', verifyJWT, async (req, res) => {
     if (decision.user_id === user_id) {
       userRole = 'owner'
     }
-    // Viewer darf NICHT bewerten!
     if (userRole === 'viewer') {
       return res.status(403).json({ error: 'Viewer dürfen keine Bewertung abgeben' })
     }
@@ -288,14 +378,12 @@ router.post('/:id/evaluate', verifyJWT, async (req, res) => {
   }
 
   try {
-    // Vorherige Bewertungen dieses Users für diese Entscheidung löschen
     await supabase
       .from('evaluations')
       .delete()
       .eq('decision_id', decision_id)
       .eq('user_id', user_id)
 
-    // Neue Bewertungen einfügen
     if (Array.isArray(evaluations) && evaluations.length > 0) {
       const evalInsert = evaluations.map(e => ({
         id: crypto.randomUUID(),
@@ -306,6 +394,52 @@ router.post('/:id/evaluate', verifyJWT, async (req, res) => {
         value: Number(e.value)
       }))
       const { error } = await supabase.from('evaluations').insert(evalInsert)
+      if (error) throw error
+    }
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// 🏋️‍♂️ Kriteriengewichte laden
+router.get('/:id/weights', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const user_id = req.userId
+  try {
+    const { data: weights, error } = await supabase
+      .from('criterion_weights')
+      .select('*')
+      .eq('decision_id', decision_id)
+      .eq('user_id', user_id)
+    if (error) throw error
+    res.json({ weights })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// 🏗️ Kriteriengewichte speichern
+router.post('/:id/weights', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const user_id = req.userId
+  const { weights } = req.body
+  if (!Array.isArray(weights)) return res.status(400).json({ error: 'No weights submitted.' })
+  try {
+    await supabase
+      .from('criterion_weights')
+      .delete()
+      .eq('decision_id', decision_id)
+      .eq('user_id', user_id)
+    if (weights.length) {
+      const insert = weights.map(w => ({
+        id: crypto.randomUUID(),
+        decision_id,
+        user_id,
+        criterion_id: w.criterion_id,
+        weight: Number(w.weight)
+      }))
+      const { error } = await supabase.from('criterion_weights').insert(insert)
       if (error) throw error
     }
     res.json({ success: true })

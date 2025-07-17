@@ -19,14 +19,13 @@ router.use((req, res, next) => {
   }
 })
 
-// POST /api/team-decisions (Team-Erstellung)
+// POST /api/team-decisions (Team-Erstellung, nur Basisdaten)
 router.post('/', async (req, res) => {
-  console.log('🟢 Rohdaten aus req.body:', req.body)
-  const { name, description, mode, timer, options = [], criteria = [], evaluations = [] } = req.body
+  const { name, description, mode, timer, options = [], criteria = [] } = req.body
   const userId = req.userId
 
   try {
-    // Entscheidung anlegen
+    // Entscheidung anlegen (Basisdaten)
     const { data: decision, error: decisionError } = await supabase
       .from('decisions')
       .insert([{ name, description, mode, user_id: userId, type: 'team' }])
@@ -41,7 +40,7 @@ router.post('/', async (req, res) => {
       .insert([{ decision_id: decisionId, timer: timer || null, created_by: userId }])
     if (teamError) throw teamError
 
-    // Creator als Teammitglied
+    // Creator als Teammitglied (Owner)
     const { data: member, error: memberError } = await supabase
       .from('team_members')
       .insert([{
@@ -55,96 +54,77 @@ router.post('/', async (req, res) => {
       .single()
     if (memberError) throw memberError
 
-    // Optionen robust parsen
-    const filteredOptions = (options || [])
-      .map((o) => {
-        if (!o) return null
-        if (typeof o === 'string') return o.trim()
-        if (typeof o === 'object' && o.name) return o.name.trim()
-        return null
-      })
-      .filter((name) => typeof name === 'string' && name !== '')
-      .map((name) => ({
-        id: crypto.randomUUID(),
-        name,
-        decision_id: decisionId
-      }))
-
-    console.log('🌐 Optionen zum Insert:', filteredOptions)
-
-    const { data: optionData, error: optionErr } = await supabase
-      .from('options')
-      .insert(filteredOptions)
-      .select()
-    if (optionErr) throw optionErr
-
-    console.log('🌐 Optionen nach Insert:', optionData)
-
-    // Kriterien robust parsen
-    const filteredCriteria = (criteria || [])
-      .filter((c) => c && typeof c.name === 'string' && c.name.trim() !== '')
-      .map((c) => ({
-        id: crypto.randomUUID(),
-        name: c.name.trim(),
-        importance: Number(c.importance) || 0,
-        decision_id: decisionId
-      }))
-
-    console.log('🌐 Kriterien zum Insert:', filteredCriteria)
-
-    const { data: critData, error: critErr } = await supabase
-      .from('criteria')
-      .insert(filteredCriteria)
-      .select()
-    if (critErr) throw critErr
-
-    console.log('🌐 Kriterien nach Insert:', critData)
-
-    // Bewertungen: index → ID auflösen
-    const evalInsert = (evaluations || []).map((e) => {
-      const optName = e.option_name || options[e.option_index]?.name || options[e.option_index]
-      const critName = e.criterion_name || criteria[e.criterion_index]?.name
-      const option = optionData?.find((o) =>
-        o.name.trim().toLowerCase() === String(optName).trim().toLowerCase()
-      )
-      const criterion = critData?.find((c) =>
-        c.name.trim().toLowerCase() === String(critName).trim().toLowerCase()
-      )
-      if (!option || !criterion) {
-        console.warn('⚠️ Option oder Kriterium nicht gefunden für evaluation:', { optName, critName })
-        return null
+    // Optionen (nur wenn vorhanden und ausgefüllt)
+    let optionData = []
+    if (Array.isArray(options) && options.length) {
+      const filteredOptions = options
+        .map(o => typeof o === 'string'
+          ? o.trim()
+          : (o && o.name ? o.name.trim() : null))
+        .filter(Boolean)
+        .map(name => ({
+          id: crypto.randomUUID(),
+          name,
+          decision_id: decisionId
+        }))
+      if (filteredOptions.length) {
+        const { data, error } = await supabase
+          .from('options')
+          .insert(filteredOptions)
+          .select()
+        if (error) throw error
+        optionData = data
       }
-      return {
-        id: crypto.randomUUID(),
-        decision_id: decisionId,
-        option_id: option.id,
-        criterion_id: criterion.id,
-        value: Number(e.value),
-        explanation: e.explanation || null
-      }
-    }).filter(Boolean)
-
-    console.log('🌐 evaluations zum Insert:', evalInsert)
-
-    if (evalInsert.length > 0) {
-      const { error: evalError } = await supabase.from('evaluations').insert(evalInsert)
-      if (evalError) throw evalError
-    } else {
-      console.warn('⚠️ Keine Bewertungen zu speichern.')
     }
 
-    // Debug-Ausgabe Endstand
-    console.log('✅ Entscheidung:', decision)
-    console.log('✅ Optionen:', optionData)
-    console.log('✅ Kriterien:', critData)
-    console.log('✅ Bewertungen:', evalInsert)
+    // Kriterien (nur wenn vorhanden und ausgefüllt)
+    if (Array.isArray(criteria) && criteria.length) {
+      const filteredCriteria = criteria
+        .filter(c => c && typeof c.name === 'string' && c.name.trim() !== '')
+        .map(c => ({
+          id: crypto.randomUUID(),
+          name: c.name.trim(),
+          importance: Number(c.importance) || 0,
+          decision_id: decisionId
+        }))
+      if (filteredCriteria.length) {
+        const { error } = await supabase
+          .from('criteria')
+          .insert(filteredCriteria)
+        if (error) throw error
+      }
+
+      // Nach dem Kriterien-Insert: Eigene Standard-Gewichtungen für den Creator setzen
+      const { data: createdCriteria, error: critFetchError } = await supabase
+        .from('criteria')
+        .select('id')
+        .eq('decision_id', decisionId)
+      if (critFetchError) throw critFetchError
+
+      const weights = createdCriteria.map((c, idx) => ({
+        id: crypto.randomUUID(),
+        decision_id: decisionId,
+        user_id: userId,
+        criterion_id: c.id,
+        weight: typeof criteria[idx].importance === 'number'
+          ? criteria[idx].importance
+          : (criteria[idx].importance ? Number(criteria[idx].importance) : 0)
+      }))
+      if (weights.length) {
+        const { error: wErr } = await supabase
+          .from('criterion_weights')
+          .insert(weights)
+        if (wErr) throw wErr
+      }
+    }
+
+    // Keine Bewertungen/Evaluations – das passiert später im Edit/Detail-Prozess
 
     return res.status(201).json({
       decision: { id: decisionId },
       invite_token: member.invite_token
     })
   } catch (err) {
-    console.error('❌ Fehler:', err)
     return res.status(500).json({ error: 'Serverfehler: ' + err.message })
   }
 })

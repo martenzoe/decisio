@@ -18,7 +18,6 @@ function TeamInvite() {
   const [activateSuccess, setActivateSuccess] = useState(null)
   const [activateError, setActivateError] = useState(null)
 
-  // Entscheidungdetails für robustes Aktivieren
   const [decisionDetails, setDecisionDetails] = useState(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
 
@@ -104,27 +103,29 @@ function TeamInvite() {
       if (!token) throw new Error('Kein gültiger Token gefunden')
       if (!decisionDetails?.decision) throw new Error('Entscheidungsdaten fehlen')
 
-      // Fix: evaluations werden als INDEX übertragen!
-      const optionList = decisionDetails.options || []
-      const criterionList = decisionDetails.criteria || []
-      const mappedEvaluations = (decisionDetails.evaluations || []).map(e => ({
-        value: e.value,
-        explanation: e.explanation,
-        option_index: optionList.findIndex(o => o.id === e.option_id),
-        criterion_index: criterionList.findIndex(c => c.id === e.criterion_id)
-      }))
+      // Nur Titel ist Pflicht!
+      if (!decisionDetails.decision.name) {
+        setActivateError('Name darf nicht leer sein.')
+        return
+      }
+
+      // Optionen und Kriterien dürfen leer sein, werden aber sauber formatiert
+      const optionList = Array.isArray(decisionDetails.options)
+        ? decisionDetails.options.map(o => ({ name: o.name })).filter(o => o.name?.trim())
+        : []
+
+      const criterionList = Array.isArray(decisionDetails.criteria)
+        ? decisionDetails.criteria.map(c => ({ name: c.name })).filter(c => c.name?.trim())
+        : []
 
       await updateDecision(id, token, {
         name: decisionDetails.decision.name,
         description: decisionDetails.decision.description,
         mode: decisionDetails.decision.mode,
         type: 'team',
-        options: optionList.map(o => ({ name: o.name })) || [],
-        criteria: criterionList.map(c => ({
-          name: c.name,
-          importance: Number(c.importance)
-        })) || [],
-        evaluations: mappedEvaluations
+        options: optionList,
+        criteria: criterionList,
+        evaluations: []
       })
 
       setActivateSuccess('Entscheidung wurde aktiviert.')
