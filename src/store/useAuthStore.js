@@ -35,7 +35,7 @@ export const useAuthStore = create(
         }
 
         try {
-          const res = await fetch('http://localhost:3000/api/users/me', {
+          const res = await fetch('https://decisio.onrender.com/api/users/me', {
             headers: { Authorization: `Bearer ${token}` }
           })
           const data = await res.json()

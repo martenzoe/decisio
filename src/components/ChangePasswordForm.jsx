@@ -12,7 +12,7 @@ function ChangePasswordForm() {
     const token = localStorage.getItem('token')
 
     try {
-      const res = await fetch('http://localhost:3000/api/change-password', {
+      const res = await fetch('https://decisio.onrender.com/api/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

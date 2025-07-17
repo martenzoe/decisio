@@ -1,7 +1,7 @@
 // src/api/teamDecision.js
 
 export async function createTeamDecision(payload, token) {
-  const res = await fetch('http://localhost:3000/api/team-decisions', {
+  const res = await fetch('https://decisio.onrender.com/api/team-decisions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -19,7 +19,7 @@ export async function createTeamDecision(payload, token) {
 }
 
 export async function updateTeamDecision(decisionId, token, payload) {
-  const res = await fetch(`http://localhost:3000/api/decision/${decisionId}`, {
+  const res = await fetch(`https://decisio.onrender.com/api/decision/${decisionId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

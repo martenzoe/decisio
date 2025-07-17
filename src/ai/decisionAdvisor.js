@@ -5,7 +5,7 @@ export async function getGPTRecommendation({ decisionName, description, options,
   if (!token) throw new Error('⛔ Kein gültiger Auth-Token')
 
   try {
-    const res = await fetch('http://localhost:3000/api/ai/recommendation', {
+    const res = await fetch('https://decisio.onrender.com/api/ai/recommendation', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

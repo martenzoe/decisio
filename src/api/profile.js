@@ -3,7 +3,7 @@ import { useAuthStore } from '../store/useAuthStore'
 
 export async function fetchProfile() {
   const { token } = useAuthStore.getState()
-  const res = await fetch('http://localhost:3000/api/users/me', {
+  const res = await fetch('https://decisio.onrender.com/api/users/me', {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -15,7 +15,7 @@ export async function fetchProfile() {
 
 export async function saveProfile(profileData) {
   const { token } = useAuthStore.getState()
-  const res = await fetch('http://localhost:3000/api/users/update', {
+  const res = await fetch('https://decisio.onrender.com/api/users/update', {
     method: 'PUT',
     headers: {
       Authorization: `Bearer ${token}`,

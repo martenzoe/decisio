@@ -17,7 +17,7 @@ function Dashboard() {
     const fetchDecisions = async () => {
       try {
         if (!token) throw new Error('Kein gültiger Token verfügbar')
-        const res = await fetch('http://localhost:3000/api/decision', {
+        const res = await fetch('https://decisio.onrender.com/api/decision', {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
@@ -61,7 +61,7 @@ function Dashboard() {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this decision?')) return
     try {
-      await fetch(`http://localhost:3000/api/decision/${id}`, {
+      await fetch(`https://decisio.onrender.com/api/decision/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       })

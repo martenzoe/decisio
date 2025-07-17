@@ -39,6 +39,7 @@ app.use(cors({
       !origin ||
       allowedOrigins.includes(origin) ||
       origin.includes('localhost')
+      || origin.includes('vercel.app')
     ) {
       callback(null, true)
     } else {

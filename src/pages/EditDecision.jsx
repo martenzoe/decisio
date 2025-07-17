@@ -20,7 +20,7 @@ function EditDecision() {
 
   useEffect(() => {
     const fetchDecision = async () => {
-      const res = await fetch(`http://localhost:3000/api/decision/${id}/details`, {
+      const res = await fetch(`https://decisio.onrender.com/api/decision/${id}/details`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
