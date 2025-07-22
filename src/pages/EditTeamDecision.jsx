@@ -19,10 +19,9 @@ export default function EditTeamDecision() {
   const [criteria, setCriteria] = useState([])
   const [userRole, setUserRole] = useState('viewer')
   const [evaluations, setEvaluations] = useState([])
+  const [weights, setWeights] = useState([])
   const [weightsChanged, setWeightsChanged] = useState(false)
   const [evalChanged, setEvalChanged] = useState(false)
-  const [weightingRef, setWeightingRef] = useState(null)
-  const [evalRef, setEvalRef] = useState(null)
 
   // Laden
   useEffect(() => {
@@ -40,11 +39,16 @@ export default function EditTeamDecision() {
           importance: typeof c.importance === 'number' ? c.importance : (c.importance ? Number(c.importance) : 0)
         })) : [])
         setUserRole(json.userRole)
+        // Gewichte laden
+        if (json.weightsByUser && user && user.id) {
+          setWeights(json.weightsByUser[user.id] || [])
+        } else {
+          setWeights([])
+        }
         // Nur eigene Bewertungen
         if (user && Array.isArray(json.evaluations)) {
           const userEvals = json.evaluations.filter(e => String(e.user_id) === String(user.id))
           if (userEvals.length === 0 && json.options.length && json.criteria.length) {
-            // Bewertungsgrid initialisieren
             const blank = []
             json.options.forEach(o => {
               json.criteria.forEach(c => {
@@ -87,39 +91,30 @@ export default function EditTeamDecision() {
         {/* Eigene Gewichtung */}
         <section className="mt-10">
           <TeamCriterionWeighting
-            decisionId={id}
             criteria={criteria}
+            weights={weights}
+            setWeights={setWeights}
             userRole={userRole}
-            onWeightsSaved={() => setReload(r => r + 1)}
-            setChanged={setWeightsChanged}
-            ref={setWeightingRef}
+            disabled={loading}
           />
         </section>
         {/* Eigene Bewertung */}
         <section className="mt-10">
           <EvaluateTeamDecision
-            decisionId={id}
             options={options}
             criteria={criteria}
-            existingEvaluations={evaluations}
+            evaluations={evaluations}
+            setEvaluations={setEvaluations}
             userRole={userRole}
-            onEvaluationsSaved={() => setReload(r => r + 1)}
-            setChanged={setEvalChanged}
-            ref={setEvalRef}
+            disabled={loading}
           />
         </section>
         {/* Ein Button für beides */}
         <div className="mt-10 text-right">
           <button
             className="bg-indigo-600 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg"
-            onClick={async () => {
-              // beide save() Methoden abfeuern
-              if (weightingRef?.saveAll) await weightingRef.saveAll()
-              if (evalRef?.saveAll) await evalRef.saveAll()
-              setSuccess('Gespeichert!')
-              setTimeout(() => setSuccess(null), 2000)
-              setReload(r => r + 1)
-            }}
+            onClick={handleSaveAll}
+            disabled={loading}
           >
             💾 Alles speichern
           </button>
@@ -173,7 +168,6 @@ export default function EditTeamDecision() {
     e.preventDefault()
     setError(null)
     setSuccess(null)
-    // Saubere, nicht-leere, keine Duplikate
     const cleanOptions = options.filter(o => o.name && o.name.trim() !== '' && !o._dup).map(({ name }) => ({ name }))
     const cleanCriteria = criteria.filter(c => c.name && c.name.trim() !== '' && !c._dup).map(({ name, importance }) => ({
       name,
@@ -197,6 +191,52 @@ export default function EditTeamDecision() {
       setReload(r => r + 1)
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  async function handleSaveAll() {
+    setError(null)
+    setSuccess(null)
+    try {
+      // Speichere Gewichtung
+      await fetch(`/api/decision/${id}/weights`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          weights: criteria.map(c => {
+            const entry = weights.find(w => w.criterion_id === c.id)
+            return {
+              criterion_id: c.id,
+              weight: entry && typeof entry.weight === 'number' ? entry.weight : Number(entry && entry.weight) || 0
+            }
+          })
+        })
+      })
+      // Speichere Bewertung
+      await fetch(`/api/decision/${id}/evaluate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          evaluations: evaluations
+            .filter(e => e.value !== '' && !isNaN(Number(e.value)))
+            .map(e => ({
+              option_id: e.option_id,
+              criterion_id: e.criterion_id,
+              value: Number(e.value)
+            }))
+        })
+      })
+      setSuccess('Gespeichert!')
+      setTimeout(() => setSuccess(null), 2000)
+      setReload(r => r + 1)
+    } catch (err) {
+      setError('Fehler beim Speichern.')
     }
   }
 
@@ -262,45 +302,31 @@ export default function EditTeamDecision() {
       {/* Gewichtung und Bewertung – immer NUR für den User selbst */}
       <section className="mt-10">
         <TeamCriterionWeighting
-          decisionId={id}
           criteria={criteria}
+          weights={weights}
+          setWeights={setWeights}
           userRole={userRole}
-          onWeightsSaved={() => setReload(r => r + 1)}
-          setChanged={setWeightsChanged}
-          ref={setWeightingRef}
         />
       </section>
       <section className="mt-10">
         <EvaluateTeamDecision
-          decisionId={id}
           options={options}
           criteria={criteria}
-          existingEvaluations={evaluations}
+          evaluations={evaluations}
+          setEvaluations={setEvaluations}
           userRole={userRole}
-          onEvaluationsSaved={() => setReload(r => r + 1)}
-          setChanged={setEvalChanged}
-          ref={setEvalRef}
         />
       </section>
       {/* Ein Button ganz unten für alles – Meta-Form muss vorher bestätigt werden */}
       <div className="mt-10 text-right">
         <button
           className="bg-indigo-600 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg"
-          onClick={async () => {
-            if (userRole !== 'viewer') {
-              // Falls Admin, vorheriges Formular abschicken
-              if (typeof handleMetaSave === 'function') await handleMetaSave({ preventDefault: () => {} })
-            }
-            if (weightingRef?.saveAll) await weightingRef.saveAll()
-            if (evalRef?.saveAll) await evalRef.saveAll()
-            setSuccess('Gespeichert!')
-            setTimeout(() => setSuccess(null), 2000)
-            setReload(r => r + 1)
-          }}
+          onClick={handleSaveAll}
         >
           💾 Alles speichern
         </button>
         {success && <div className="text-green-600 mt-2">{success}</div>}
+        {error && <div className="text-red-600 mt-2">{error}</div>}
       </div>
     </div>
   )

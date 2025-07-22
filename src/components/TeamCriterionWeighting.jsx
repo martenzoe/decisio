@@ -1,26 +1,23 @@
-import React, { useEffect, useState } from 'react'
-import { useAuthStore } from '../store/useAuthStore'
+import React from 'react'
 
-export default function TeamCriterionWeighting({ decisionId, criteria, userRole, onWeightsSaved }) {
-  const { user, token } = useAuthStore()
-  const [weights, setWeights] = useState([])
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(false)
+export default function TeamCriterionWeighting({
+  criteria,
+  weights,
+  setWeights,
+  userRole,
+  disabled
+}) {
+  // Jeder außer Viewer kann editieren
+  const canEdit = userRole !== 'viewer'
+  if (!canEdit) return null
 
-  // Nur eigene Gewichtungen laden
-  useEffect(() => {
-    if (!user || !decisionId || !token) return
-    setError(null)
-    fetch(`/api/decision/${decisionId}/weights`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(json => {
-        setWeights(Array.isArray(json.weights) ? json.weights : [])
-      })
-      .catch(err => setError(err.message))
-  }, [user, decisionId, token, success]) // success triggert Refresh nach Speichern
+  if (!criteria.length) {
+    return (
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8 text-gray-500 text-center">
+        Noch keine Kriterien vorhanden. Sobald Kriterien definiert sind, kannst du hier deine Gewichtung abgeben.
+      </div>
+    )
+  }
 
   function getWeight(criterionId) {
     const entry = weights.find(w => w.criterion_id === criterionId)
@@ -39,47 +36,6 @@ export default function TeamCriterionWeighting({ decisionId, criteria, userRole,
         return [...ws, { criterion_id: criterionId, weight: cleanValue }]
       }
     })
-    setSuccess(false)
-  }
-
-  async function saveAll() {
-    setSaving(true)
-    setError(null)
-    try {
-      const body = {
-        weights: criteria.map(c => ({
-          criterion_id: c.id,
-          weight: Number(getWeight(c.id)) || 0
-        }))
-      }
-      const res = await fetch(`/api/decision/${decisionId}/weights`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
-      })
-      if (!res.ok) throw new Error('Konnte nicht speichern.')
-      setSuccess(true)
-      if (onWeightsSaved) onWeightsSaved()
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  // NEU: Jeder außer Viewer kann hier gewichten!
-  const canEdit = userRole !== 'viewer'
-  if (!canEdit) return null
-
-  if (!criteria.length) {
-    return (
-      <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8 text-gray-500 text-center">
-        Noch keine Kriterien vorhanden. Sobald Kriterien definiert sind, kannst du hier deine Gewichtung abgeben.
-      </div>
-    )
   }
 
   return (
@@ -104,7 +60,7 @@ export default function TeamCriterionWeighting({ decisionId, criteria, userRole,
                   min="0"
                   max="100"
                   step="1"
-                  disabled={saving}
+                  disabled={disabled}
                   value={getWeight(c.id)}
                   onChange={e => setWeight(c.id, e.target.value)}
                   className="w-20 p-1 border rounded"
@@ -115,17 +71,6 @@ export default function TeamCriterionWeighting({ decisionId, criteria, userRole,
           ))}
         </tbody>
       </table>
-      <div className="flex gap-4 items-center mt-4">
-        <button
-          onClick={saveAll}
-          className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-          disabled={saving || !criteria.length}
-        >
-          {saving ? 'Speichert...' : 'Gewichtung speichern'}
-        </button>
-        {error && <span className="text-red-500">{error}</span>}
-        {success && <span className="text-green-600">Gespeichert!</span>}
-      </div>
     </div>
   )
 }
