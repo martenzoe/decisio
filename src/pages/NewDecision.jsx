@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getGPTRecommendation } from '../ai/decisionAdvisor'
-import { updateDecision } from '../api/decision'
 import { useAuthStore } from '../store/useAuthStore'
 
 function NewDecision() {
@@ -75,6 +74,7 @@ function NewDecision() {
 
     setLoading(true)
     try {
+      // 1. Entscheidung anlegen
       const res = await fetch('/api/decision', {
         method: 'POST',
         headers: {
@@ -88,34 +88,69 @@ function NewDecision() {
       if (!res.ok) throw new Error(created.error || 'Fehler beim Erstellen')
       const decisionId = created.id
 
-      const evalArray = []
-      options.forEach((_, optIdx) => {
-        criteria.forEach((_, critIdx) => {
-          const val = Number(evaluations[optIdx]?.[critIdx])
-          const explanation = evaluations[optIdx]?.[`explanation_${critIdx}`] || null
-          if (!isNaN(val)) {
-            evalArray.push({
-              option_index: optIdx,
-              criterion_index: critIdx,
-              value: val,
-              explanation
-            })
-          }
+      // Nur für Einzelentscheidungen: jetzt Optionen & Kriterien & Bewertungen speichern
+      if (type !== 'team') {
+        // 2. Optionen & Kriterien anlegen und IDs zurückholen
+        const detailsRes = await fetch(`/api/decision/${decisionId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: decisionName,
+            description,
+            mode,
+            type,
+            options: options.map(o => ({ name: o })),
+            criteria: criteria.map(c => ({
+              name: c.name,
+              importance: Number(c.importance)
+            }))
+          })
         })
-      })
+        if (!detailsRes.ok) throw new Error('Optionen/Kriterien konnten nicht gespeichert werden.')
 
-      await updateDecision(decisionId, token, {
-        name: decisionName,
-        description,
-        mode,
-        type,
-        options: options.map(o => ({ name: o })),
-        criteria: criteria.map(c => ({
-          name: c.name,
-          importance: Number(c.importance)
-        })),
-        evaluations: evalArray
-      })
+        // 3. IDs für Optionen/Kriterien holen
+        const details = await fetch(`/api/decision/${decisionId}/details`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const detailsData = await details.json()
+        const { options: optArr, criteria: critArr } = detailsData
+
+        // Map Index zu ID
+        const optIdByIdx = Object.fromEntries(optArr.map((o, idx) => [idx, o.id]))
+        const critIdByIdx = Object.fromEntries(critArr.map((c, idx) => [idx, c.id]))
+
+        // 4. Bewertungen speichern
+        const evalArray = []
+        options.forEach((_, optIdx) => {
+          criteria.forEach((_, critIdx) => {
+            const val = Number(evaluations[optIdx]?.[critIdx])
+            const explanation = evaluations[optIdx]?.[`explanation_${critIdx}`] || null
+            if (!isNaN(val) && val !== '') {
+              evalArray.push({
+                option_id: optIdByIdx[optIdx],
+                criterion_id: critIdByIdx[critIdx],
+                value: val,
+                explanation
+              })
+            }
+          })
+        })
+
+        if (evalArray.length > 0) {
+          const evalRes = await fetch(`/api/decision/${decisionId}/evaluate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ evaluations: evalArray })
+          })
+          if (!evalRes.ok) throw new Error('Bewertungen konnten nicht gespeichert werden.')
+        }
+      }
 
       navigate(`/decision/${decisionId}`)
     } catch (err) {
