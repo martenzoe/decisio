@@ -197,7 +197,34 @@ router.delete('/:id', verifyJWT, async (req, res) => {
   }
 })
 
-// 📄 Entscheidung + Details abrufen – erweitert um teamMembers
+// PATCH /api/decision/:id/timer – Deadline setzen/ändern/löschen (nur Admin/Owner)
+router.patch('/:id/timer', verifyJWT, async (req, res) => {
+  const decision_id = req.params.id
+  const user_id = req.userId
+  const { timer } = req.body
+
+  try {
+    const { data: member } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('decision_id', decision_id)
+      .eq('user_id', user_id)
+      .maybeSingle()
+    if (!member || !['owner', 'admin'].includes(member.role)) {
+      return res.status(403).json({ error: 'Keine Berechtigung' })
+    }
+    const { error } = await supabase
+      .from('team_decisions')
+      .update({ timer: timer || null })
+      .eq('decision_id', decision_id)
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// 📄 Entscheidung + Details abrufen – inkl. Deadline (timer) bei Teams
 router.get('/:id/details', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
@@ -215,6 +242,7 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
 
     let userRole = 'owner'
     let hasAccess = false
+    let timer = null
 
     if (decision.type === 'team') {
       const { data: member } = await supabase
@@ -231,6 +259,13 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
         userRole = 'owner'
         hasAccess = true
       }
+      // Timer laden
+      const { data: teamMeta } = await supabase
+        .from('team_decisions')
+        .select('timer')
+        .eq('decision_id', decision_id)
+        .maybeSingle()
+      timer = teamMeta?.timer || null
     } else {
       hasAccess = (decision.user_id === user_id)
     }
@@ -291,7 +326,8 @@ router.get('/:id/details', verifyJWT, async (req, res) => {
       evaluations,
       userRole,
       weightsByUser,
-      teamMembers
+      teamMembers,
+      timer // NEU
     })
   } catch (err) {
     res.status(500).json({ error: err.message })
@@ -338,13 +374,15 @@ router.get('/:id/type', verifyJWT, async (req, res) => {
   }
 })
 
-// 🧮 Einzel-Bewertungen speichern
+// 🧮 Einzel-Bewertungen speichern (Deadline-Check integriert)
 router.post('/:id/evaluate', verifyJWT, async (req, res) => {
   const decision_id = req.params.id
   const user_id = req.userId
   const { evaluations } = req.body
 
   let userRole = 'owner'
+  let timer = null
+
   const { data: decision, error: decisionErr } = await supabase
     .from('decisions')
     .select('*')
@@ -368,6 +406,24 @@ router.post('/:id/evaluate', verifyJWT, async (req, res) => {
     if (decision.user_id === user_id) {
       userRole = 'owner'
     }
+
+    // Deadline-Check (nur für normale Mitglieder, nicht Owner/Admin)
+    const { data: teamMeta } = await supabase
+      .from('team_decisions')
+      .select('timer')
+      .eq('decision_id', decision_id)
+      .maybeSingle()
+    timer = teamMeta?.timer || null
+
+    if (
+      timer &&
+      userRole !== 'owner' &&
+      userRole !== 'admin' &&
+      new Date() > new Date(timer)
+    ) {
+      return res.status(403).json({ error: 'Deadline abgelaufen. Die Entscheidung ist geschlossen.' })
+    }
+
     if (userRole === 'viewer') {
       return res.status(403).json({ error: 'Viewer dürfen keine Bewertung abgeben' })
     }

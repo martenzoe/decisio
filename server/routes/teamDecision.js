@@ -129,4 +129,33 @@ router.post('/', async (req, res) => {
   }
 })
 
+// PATCH /api/team-decisions/:id/timer – Deadline setzen/ändern/löschen
+router.patch('/:id/timer', async (req, res) => {
+  const { id } = req.params
+  const userId = req.userId
+  const { timer } = req.body
+
+  try {
+    // Berechtigung prüfen
+    const { data: member } = await supabase
+      .from('team_members')
+      .select('role')
+      .eq('decision_id', id)
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (!member || !['owner', 'admin'].includes(member.role)) {
+      return res.status(403).json({ error: 'Keine Berechtigung' })
+    }
+
+    const { error } = await supabase
+      .from('team_decisions')
+      .update({ timer: timer || null })
+      .eq('decision_id', id)
+    if (error) throw error
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 export default router

@@ -39,6 +39,11 @@ export default function EvaluateTeamDecision({
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8">
       <h3 className="text-lg font-bold mb-2">Deine Bewertung</h3>
+      {disabled && (
+        <div className="mb-4 p-2 bg-red-100 text-red-800 rounded text-sm font-bold text-center">
+          Deadline abgelaufen. Voting nicht mehr möglich.
+        </div>
+      )}
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -64,7 +69,7 @@ export default function EvaluateTeamDecision({
                     disabled={disabled}
                     value={getValue(o.id, c.id)}
                     onChange={e => setValue(o.id, c.id, e.target.value)}
-                    className="w-16 p-1 border rounded"
+                    className={`w-16 p-1 border rounded ${disabled ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}`}
                     aria-label={`Bewertung für ${o.name} nach ${c.name}`}
                   />
                 </td>
@@ -73,6 +78,17 @@ export default function EvaluateTeamDecision({
           ))}
         </tbody>
       </table>
+      {/* Optional: Button ausgrauen, falls du ihn hier drin hast */}
+      {/* 
+      <div className="mt-4 text-right">
+        <button
+          className="bg-indigo-600 text-white px-6 py-2 rounded font-semibold"
+          disabled={disabled}
+        >
+          {disabled ? 'Voting gesperrt' : 'Abstimmen'}
+        </button>
+      </div>
+      */}
     </div>
   )
 }

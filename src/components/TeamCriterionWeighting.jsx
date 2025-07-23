@@ -43,6 +43,11 @@ export default function TeamCriterionWeighting({
       <h3 className="text-lg font-bold mb-2">
         Deine Gewichtung der Kriterien <span className="text-sm text-gray-400">(optional)</span>
       </h3>
+      {disabled && (
+        <div className="mb-4 p-2 bg-red-100 text-red-800 rounded text-sm font-bold text-center">
+          Deadline abgelaufen, Gewichtung nicht mehr möglich.
+        </div>
+      )}
       <table className="w-full border-collapse">
         <thead>
           <tr>
@@ -63,7 +68,7 @@ export default function TeamCriterionWeighting({
                   disabled={disabled}
                   value={getWeight(c.id)}
                   onChange={e => setWeight(c.id, e.target.value)}
-                  className="w-20 p-1 border rounded"
+                  className={`w-20 p-1 border rounded ${disabled ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}`}
                   inputMode="numeric"
                 />
               </td>

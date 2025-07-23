@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
-import { formatDistanceToNow } from 'date-fns'
+import { useParams, useNavigate } from 'react-router-dom'
+import { format, formatDistanceToNow } from 'date-fns'
+import { de } from 'date-fns/locale'
 import { useAuthStore } from '../store/useAuthStore'
 
 export default function TeamDecisionDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pollTries, setPollTries] = useState(0)
@@ -119,8 +121,15 @@ export default function TeamDecisionDetail() {
     criteria = [],
     evaluations = [],
     weightsByUser = {},
-    teamMembers = []
+    teamMembers = [],
+    userRole
   } = data || {}
+
+  // DEADLINE-Logik
+  const deadline = data?.timer ? new Date(data.timer) : null
+  const now = new Date()
+  const isClosed = !!deadline && now > deadline
+  const isAdmin = userRole && ['owner', 'admin'].includes(userRole)
 
   // Team-Gewichtungen: Mittelwert je Kriterium, Fallback zu importance
   function getMeanTeamWeights() {
@@ -155,7 +164,6 @@ export default function TeamDecisionDetail() {
   // Team-Durchschnitt als gewichteter Mittelwert aller User
   function getTeamWeightedScore(optionId, weightsMap) {
     if (!criteria.length) return '-'
-    // Für jede Bewertung, gruppiert nach User, berechne den gewichteten Schnitt
     const byUser = {}
     evaluations.forEach(e => {
       if (e.option_id === optionId) {
@@ -163,7 +171,6 @@ export default function TeamDecisionDetail() {
         byUser[e.user_id][e.criterion_id] = Number(e.value)
       }
     })
-    // Jeder User-Score: gewichtet nach weightsMap
     const userScores = Object.values(byUser).map(critVals => {
       let total = 0
       let weightSum = 0
@@ -179,7 +186,6 @@ export default function TeamDecisionDetail() {
       return null
     }).filter(x => x !== null)
     if (!userScores.length) return 0
-    // Jetzt Mittelwert aller gewichteten User-Scores
     const avg = userScores.reduce((sum, s) => sum + s, 0) / userScores.length
     return Math.round(avg * 10) / 10
   }
@@ -219,6 +225,35 @@ export default function TeamDecisionDetail() {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-8 text-gray-900 dark:text-gray-100">
+      {/* DEADLINE-BADGE */}
+      <div className="flex flex-wrap gap-4 items-center mb-2">
+        {deadline ? (
+          <div className={`rounded-lg px-4 py-2 text-sm font-bold shadow ${isClosed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+            <span>
+              Deadline:&nbsp;
+              <span className="font-semibold">{format(deadline, 'Pp', { locale: de })}</span>
+              &nbsp;–&nbsp;
+              {isClosed
+                ? <span>Abgelaufen <span className="text-xs font-normal">(Voting gesperrt)</span></span>
+                : <span>Noch {formatDistanceToNow(deadline, { addSuffix: true, locale: de })}</span>
+              }
+            </span>
+          </div>
+        ) : (
+          <div className="rounded-lg px-4 py-2 text-sm shadow bg-gray-100 text-gray-500">
+            Keine Deadline gesetzt.
+          </div>
+        )}
+        {isAdmin && (
+          <button
+            className="ml-2 text-blue-700 underline text-xs"
+            onClick={() => navigate(`/team-decision/${decision.id}/edit`)}
+          >
+            Deadline ändern
+          </button>
+        )}
+      </div>
+
       {/* TEAM + Status */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 mb-4">
         <h3 className="text-lg font-bold mb-2">Team & Status</h3>
