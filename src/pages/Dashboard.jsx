@@ -3,18 +3,27 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
 
+const FILTERS = [
+  { key: 'newest', label: 'Newest' },
+  { key: 'solo', label: 'Solo' },
+  { key: 'team', label: 'Team' },
+  { key: 'manual', label: 'Manual' },
+  { key: 'ai', label: 'AI' }
+]
+
 function Dashboard() {
   const navigate = useNavigate()
-  const { user, token } = useAuthStore()
+  const { token } = useAuthStore()
 
   const [decisions, setDecisions] = useState([])
   const [filtered, setFiltered] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [filter, setFilter] = useState('latest')
+  const [activeFilter, setActiveFilter] = useState('newest')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchDecisions = async () => {
+      setLoading(true)
       try {
         if (!token) throw new Error('Kein gültiger Token verfügbar')
         const res = await fetch('https://decisio.onrender.com/api/decision', {
@@ -24,7 +33,6 @@ function Dashboard() {
         if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidungen')
         if (!Array.isArray(data)) throw new Error('Ungültige Datenstruktur')
 
-        // Unique by ID
         const unique = Array.from(new Map(data.map(d => [d.id, d])).values())
         setDecisions(unique)
         setFiltered(unique)
@@ -35,28 +43,42 @@ function Dashboard() {
         setLoading(false)
       }
     }
-
     fetchDecisions()
   }, [token])
 
   useEffect(() => {
     let result = [...decisions]
+
+    // Suche
     if (searchTerm) {
       result = result.filter(d =>
         d.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
-    if (filter === 'manual') {
-      result = result.filter(d => d.mode === 'manual')
-    } else if (filter === 'ai') {
-      result = result.filter(d => d.mode === 'ai')
-    } else if (filter === 'score') {
-      result.sort((a, b) => (b.score || 0) - (a.score || 0))
-    } else {
-      result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+    // Filter
+    switch (activeFilter) {
+      case 'solo':
+        result = result.filter(d => d.type !== 'team')
+        break
+      case 'team':
+        result = result.filter(d => d.type === 'team')
+        break
+      case 'manual':
+        result = result.filter(d => d.mode === 'manual')
+        break
+      case 'ai':
+        result = result.filter(d => d.mode === 'ai')
+        break
+      default:
+        // newest (kein Filter, aber sortieren)
+        break
     }
+    // Sortierung (neuste zuerst)
+    result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
     setFiltered(result)
-  }, [searchTerm, filter, decisions])
+  }, [searchTerm, activeFilter, decisions])
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this decision?')) return
@@ -67,6 +89,32 @@ function Dashboard() {
       })
       setDecisions(prev => prev.filter(d => d.id !== id))
     } catch (err) { /* Fehler ignorieren */ }
+  }
+
+  // Badge-Rendering mit CI-Farben
+  function renderTypeBadge(type) {
+    if (type === 'team') {
+      // Dunkleres Lila
+      return (
+        <span className="ml-2 inline-block px-2 py-0.5 text-xs font-bold rounded"
+          style={{ background: '#5851D6', color: '#fff', letterSpacing: '1px' }}>
+          TEAM
+        </span>
+      )
+    }
+    // Solo: helleres Lila
+    return (
+      <span className="ml-2 inline-block px-2 py-0.5 text-xs font-bold rounded"
+        style={{ background: '#9089FC', color: '#222', letterSpacing: '1px' }}>
+        SOLO
+      </span>
+    )
+  }
+
+  // Button-Text abhängig vom Typ
+  function getEditButtonLabel(type) {
+    if (type === 'team') return 'Vote'
+    return 'Edit'
   }
 
   return (
@@ -95,6 +143,7 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* FILTER BAR */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <input
             type="text"
@@ -104,17 +153,12 @@ function Dashboard() {
             className="p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm w-full sm:w-1/2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400"
           />
           <div className="flex flex-wrap gap-2">
-            {[
-              { key: 'latest', label: 'Newest' },
-              { key: 'score', label: 'Highest Score' },
-              { key: 'manual', label: 'Manual' },
-              { key: 'ai', label: 'AI' },
-            ].map(btn => (
+            {FILTERS.map(btn => (
               <button
                 key={btn.key}
-                onClick={() => setFilter(btn.key)}
+                onClick={() => setActiveFilter(btn.key)}
                 className={`px-3 py-1 rounded-md text-sm font-medium border transition ${
-                  filter === btn.key
+                  activeFilter === btn.key
                     ? 'bg-[#4F46E5] text-white'
                     : 'bg-white text-gray-700 dark:bg-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
                 }`}
@@ -125,6 +169,7 @@ function Dashboard() {
           </div>
         </div>
 
+        {/* LIST */}
         {loading ? (
           <p className="text-center text-gray-500 dark:text-gray-300">Loading decisions…</p>
         ) : filtered.length === 0 ? (
@@ -134,8 +179,10 @@ function Dashboard() {
             {filtered.map((d) => (
               <div
                 key={d.id}
-                className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 shadow-sm flex flex-col justify-between"
+                className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-4 shadow-sm flex flex-col justify-between relative"
               >
+                {/* BADGE oben rechts */}
+                <div className="absolute top-2 right-4">{renderTypeBadge(d.type)}</div>
                 <div>
                   <h3 className="font-semibold text-lg text-gray-800 dark:text-white">{d.name}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{d.description}</p>
@@ -165,9 +212,15 @@ function Dashboard() {
                         ? navigate(`/team-decision/${d.id}/edit`)
                         : navigate(`/decision/${d.id}/edit`)
                     }
-                    className="text-yellow-600 dark:text-yellow-400 hover:underline"
+                    className={`
+                      ${d.type === 'team'
+                        ? 'text-green-700 dark:text-green-400'
+                        : 'text-yellow-600 dark:text-yellow-400'
+                      }
+                      hover:underline
+                    `}
                   >
-                    Edit
+                    {getEditButtonLabel(d.type)}
                   </button>
                   <button
                     onClick={() => handleDelete(d.id)}

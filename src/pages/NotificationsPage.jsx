@@ -1,4 +1,3 @@
-// src/pages/NotificationsPage.jsx
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/useAuthStore'
 import { useNavigate } from 'react-router-dom'
@@ -6,12 +5,13 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 
 function NotificationsPage() {
-  const token = useAuthStore((state) => state.token)
+  const { token, user, setUnreadNotifications } = useAuthStore()
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const navigate = useNavigate()
 
+  // Nach Aufruf: als gelesen markieren und Counter im Store auf 0 setzen
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
@@ -21,8 +21,20 @@ function NotificationsPage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Benachrichtigungen')
         setNotifications(data)
+
+        // Alle ungelesenen direkt als gelesen markieren
+        const unread = data.filter(n => !n.read)
+        if (unread.length > 0) {
+          await Promise.all(unread.map(n =>
+            fetch(`/api/notifications/${n.id}/read`, {
+              method: 'PUT',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+          ))
+          // Counter im Store auf 0 setzen
+          setUnreadNotifications && setUnreadNotifications(0)
+        }
       } catch (err) {
-        console.error('❌ Fehler beim Laden:', err)
         setError(err.message)
       } finally {
         setLoading(false)
@@ -30,26 +42,28 @@ function NotificationsPage() {
     }
 
     if (token) fetchNotifications()
-  }, [token])
+  }, [token, setUnreadNotifications])
 
-  const markAsRead = async (id) => {
-    try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-      )
-    } catch (err) {
-      console.error('❌ Fehler beim Markieren:', err)
-    }
+  // Zeigt den Button NUR, wenn User Empfänger ist (user.id === n.user_id) UND nicht der Einladende
+  function showAcceptButton(n) {
+    if (!user?.id) return false
+    if (n.read) return false
+    if (!n.message?.toLowerCase().includes('eingeladen')) return false
+    if (user.id !== n.user_id) return false // Empfänger-Check
+    if (user.id === n.inviter_id) return false // Nicht für Einladenden
+    return true
   }
 
+  // Annahme (Benachrichtigung als gelesen und ggf. zum Link)
   const handleAccept = async (notification) => {
-    if (!notification.link) return
-    await markAsRead(notification.id)
-    navigate(notification.link)
+    await fetch(`/api/notifications/${notification.id}/read`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n))
+    )
+    if (notification.link) navigate(notification.link)
   }
 
   return (
@@ -75,7 +89,7 @@ function NotificationsPage() {
                   {new Date(n.created_at).toLocaleString()}
                 </p>
               </div>
-              {!n.read && (
+              {showAcceptButton(n) && (
                 <button
                   onClick={() => handleAccept(n)}
                   className="text-sm text-blue-600 hover:underline"
