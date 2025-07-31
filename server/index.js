@@ -13,6 +13,7 @@ import teamRoutes from './routes/team.js'
 import teamDecisionRoutes from './routes/teamDecision.js'
 import userRoutes from './routes/users.js'
 import notificationsRoutes from './routes/notifications.js'
+import aiTeam from './routes/aiTeam.js' // NEU
 // import teamEvaluationsRoutes from './routes/teamEvaluations.js' // ENTFERNT
 
 dotenv.config()
@@ -38,8 +39,8 @@ app.use(cors({
     if (
       !origin ||
       allowedOrigins.includes(origin) ||
-      origin.includes('localhost')
-      || origin.includes('vercel.app')
+      origin.includes('localhost') ||
+      origin.includes('vercel.app')
     ) {
       callback(null, true)
     } else {
@@ -98,7 +99,7 @@ app.use('/api/comments', commentsRouter)
 app.use('/api/team', teamRoutes)
 app.use('/api/team-decisions', teamDecisionRoutes)
 app.use('/api/notifications', notificationsRoutes) // ✅ NEU
-// app.use('/api/team-evaluations', teamEvaluationsRoutes) // ENTFERNT
+app.use('/api/team-ai', aiTeam) // <-- genau wie importiert!
 
 // ✅ Test-Route
 app.get('/', (req, res) => {

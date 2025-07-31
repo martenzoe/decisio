@@ -131,6 +131,11 @@ export default function TeamDecisionDetail() {
   const isClosed = !!deadline && now > deadline
   const isAdmin = userRole && ['owner', 'admin'].includes(userRole)
 
+  // KI-Auswertung erkennen
+  const isAIMode = decision?.mode === 'ai'
+  const aiEvaluations = evaluations.filter(e => e.generated_by === 'ai' && !e.user_id)
+  const isAIResult = isAIMode && aiEvaluations.length > 0
+
   // Team-Gewichtungen: Mittelwert je Kriterium, Fallback zu importance
   function getMeanTeamWeights() {
     const sum = {}
@@ -158,7 +163,7 @@ export default function TeamDecisionDetail() {
     )
     if (!relevant.length) return null
     const avg = relevant.reduce((sum, e) => sum + (Number(e.value) || 0), 0) / relevant.length
-    return Math.round(avg * 10) / 10
+    return Number(avg.toFixed(1))
   }
 
   // Team-Durchschnitt als gewichteter Mittelwert aller User
@@ -182,16 +187,45 @@ export default function TeamDecisionDetail() {
           weightSum += weight
         }
       })
-      if (weightSum > 0) return total / weightSum * 100
+      if (weightSum > 0) return total / weightSum
       return null
     }).filter(x => x !== null)
     if (!userScores.length) return 0
     const avg = userScores.reduce((sum, s) => sum + s, 0) / userScores.length
-    return Math.round(avg * 10) / 10
+    return Number((avg * 100).toFixed(1))
   }
 
-  // Wer hat abgestimmt (mind. 1 Bewertung)?
+  // ====== NEU: KI-Ergebnis für Option =======
+  function getAIWeightedScore(optionId, weightsMap) {
+    if (!criteria.length) return '-'
+    let total = 0
+    let weightSum = 0
+    criteria.forEach(c => {
+      const aiEval = aiEvaluations.find(e => e.option_id === optionId && e.criterion_id === c.id)
+      const score = aiEval ? Number(aiEval.value) : null
+      const weight = Number(weightsMap[c.id]) || 0
+      if (score !== null && !isNaN(score) && weight > 0) {
+        total += score * weight
+        weightSum += weight
+      }
+    })
+    return weightSum > 0 ? Number(((total / weightSum) * 100).toFixed(1)) : '-'
+  }
+
+  // Wer hat abgestimmt? (Manuell = mind. 1 Bewertung, KI = mind. 1 Gewichtung)
   function getVoters() {
+    if (isAIResult) {
+      const votedMap = {}
+      Object.keys(weightsByUser).forEach(userId => {
+        if (Array.isArray(weightsByUser[userId]) && weightsByUser[userId].length > 0) {
+          votedMap[String(userId)] = true
+        }
+      })
+      return teamMembers.map(m => ({
+        ...m,
+        voted: !!votedMap[String(m.user_id)]
+      }))
+    }
     const votedMap = {}
     evaluations.forEach(e => {
       if (e && e.user_id) votedMap[String(e.user_id)] = true
@@ -202,6 +236,30 @@ export default function TeamDecisionDetail() {
     }))
   }
   const teamWithStatus = getVoters()
+
+  // Pokal für beste Option (nur anzeigen wenn mind. eine Bewertung da)
+  let bestScore = null
+  let bestOptionId = null
+  if (options.length && criteria.length) {
+    let scores
+    if (isAIResult) {
+      scores = options.map(o => ({
+        id: o.id,
+        score: getAIWeightedScore(o.id, meanTeamWeights)
+      }))
+    } else {
+      scores = options.map(o => ({
+        id: o.id,
+        score: getTeamWeightedScore(o.id, meanTeamWeights)
+      }))
+    }
+    // Nur Zahlen werten (Achtung: "-" abfangen)
+    const max = scores.filter(x => typeof x.score === 'number' && !isNaN(x.score)).sort((a, b) => b.score - a.score)[0]
+    if (max && max.score !== undefined) {
+      bestScore = max.score
+      bestOptionId = max.id
+    }
+  }
 
   // ==== Render ====
   if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
@@ -306,30 +364,70 @@ export default function TeamDecisionDetail() {
               <th className="border px-4 py-2">Team-Ergebnis</th>
             </tr>
           </thead>
+
+          {/* Hier dein gewünschter Tabellen-Body */}
           <tbody>
-            {options.map(o => (
-              <tr key={o.id}>
-                <td className="border px-4 py-2">{o.name}</td>
-                {criteria.map(c => {
-                  const avg = getMeanScore(o.id, c.id)
-                  return (
-                    <td key={c.id} className="border px-4 py-2 text-center">
-                      {avg !== null ? avg : '-'}
-                    </td>
-                  )
-                })}
-                <td className="border px-4 py-2 text-center font-semibold">
-                  {Object.keys(meanTeamWeights).length
+            {options.map(o => {
+              // Ergebnis berechnen (immer mit Dezimalstelle)
+              const score = isAIResult
+                ? getAIWeightedScore(o.id, meanTeamWeights)
+                : (Object.keys(meanTeamWeights).length
                     ? getTeamWeightedScore(o.id, meanTeamWeights)
-                    : <span className="text-gray-400">-</span>}
-                </td>
-              </tr>
-            ))}
+                    : '-');
+
+              // Alle Scores als Zahl für Pokal-Logik (ohne '-')
+              const allScores = options.map(opt =>
+                isAIResult
+                  ? getAIWeightedScore(opt.id, meanTeamWeights)
+                  : (Object.keys(meanTeamWeights).length
+                      ? getTeamWeightedScore(opt.id, meanTeamWeights)
+                      : '-')
+              );
+              const validScores = allScores.filter(n => typeof n === 'number');
+              const maxScore = validScores.length ? Math.max(...validScores) : null;
+
+              return (
+                <tr key={o.id}>
+                  {/* Option + Pokal */}
+                  <td className="border px-4 py-2 font-semibold align-middle">
+                    <span className="inline-flex items-center gap-1">
+                      {o.name}
+                      {score === maxScore && typeof score === 'number' && (
+                        <span title="Top-Ergebnis" style={{ fontSize: '1.1em', marginLeft: 4 }}>🏆</span>
+                      )}
+                    </span>
+                  </td>
+                  {/* Kriterien-Spalten */}
+                  {criteria.map(c => {
+                    if (isAIResult) {
+                      const aiEval = aiEvaluations.find(e => e.option_id === o.id && e.criterion_id === c.id)
+                      return (
+                        <td key={c.id} className="border px-4 py-2 text-center align-middle">
+                          <div className="font-bold">{aiEval?.value ?? '-'}</div>
+                          <div className="text-xs text-gray-500 mt-1 italic">{aiEval?.explanation ?? ''}</div>
+                        </td>
+                      )
+                    }
+                    const avg = getMeanScore(o.id, c.id)
+                    return (
+                      <td key={c.id} className="border px-4 py-2 text-center align-middle">{avg !== null ? avg : '-'}</td>
+                    )
+                  })}
+                  {/* Team-Ergebnis */}
+                  <td className="border px-4 py-2 text-center font-semibold align-middle">
+                    {typeof score === 'number' ? score.toFixed(2) : <span className="text-gray-400">-</span>}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         <div className="text-xs text-gray-400 mt-2">
-          Die Gewichtung (in Klammern) ist der Team-Durchschnitt oder die voreingestellte Gewichtung.<br />
-          Die Ergebnisse sind für alle Teammitglieder identisch. Änderungen gehen nur über die Bewertungsmaske.
+          {isAIResult
+            ? <>Diese Entscheidung wurde automatisch von der KI bewertet. Begründungen stehen in den Zellen. Das Team-Ergebnis ist das gewichtete Resultat aller KI-Bewertungen.</>
+            : <>Die Gewichtung (in Klammern) ist der Team-Durchschnitt oder die voreingestellte Gewichtung.<br />
+            Die Ergebnisse sind für alle Teammitglieder identisch. Änderungen gehen nur über die Bewertungsmaske.</>
+          }
         </div>
       </div>
 

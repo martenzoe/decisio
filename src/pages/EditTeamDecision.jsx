@@ -20,6 +20,9 @@ export default function EditTeamDecision() {
   const [evaluations, setEvaluations] = useState([])
   const [weights, setWeights] = useState([])
   const [deadline, setDeadline] = useState('')
+  const [mode, setMode] = useState('manual')
+  const [aiEvaluated, setAiEvaluated] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
 
   // Deadline-Check
   const deadlineDate = deadline ? new Date(deadline) : null
@@ -42,6 +45,10 @@ export default function EditTeamDecision() {
         })) : [])
         setUserRole(json.userRole)
         setDeadline(json.timer || '')
+        setMode(json.decision.mode || 'manual')
+        // Erkenne KI-Auswertung: mind. eine Bewertung von 'ai'
+        setAiEvaluated(Array.isArray(json.evaluations) && json.evaluations.some(e => e.generated_by === 'ai'))
+
         if (json.weightsByUser && user && user.id) {
           setWeights(json.weightsByUser[user.id] || [])
         } else {
@@ -73,7 +80,7 @@ export default function EditTeamDecision() {
     // eslint-disable-next-line
   }, [user, id, token, reload])
 
-  // Dedupe-Helpers
+  // Helpers
   function isDuplicate(array, key, value, idx) {
     return array.some((item, i) =>
       i !== idx &&
@@ -114,13 +121,11 @@ export default function EditTeamDecision() {
     return obj._dup ? 'border-2 border-red-500 bg-red-50 dark:bg-red-900' : ''
   }
 
-  // Hilfsfunktion Deadline
   function getMinDeadline() {
     const now = new Date(Date.now() + 5 * 60000)
     return now.toISOString().slice(0, 16)
   }
 
-  // Deadline PATCH (immer verfügbar für Admins/Owner)
   async function saveDeadline(newTimer) {
     setError(null)
     try {
@@ -137,12 +142,66 @@ export default function EditTeamDecision() {
     }
   }
 
-  // ALLES speichern – auch Name/Beschreibung/Meta-Änderungen
+  async function handleModeChange(e) {
+    const value = e.target.value
+    if (aiEvaluated) return // Keine Änderung nach KI-Auswertung
+    setMode(value)
+    try {
+      const res = await fetch(`/api/decision/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          name,
+          description,
+          mode: value,
+          type: 'team',
+          options: options.map(({ name }) => ({ name })),
+          criteria: criteria.map(({ name, importance }) => ({ name, importance }))
+        })
+      })
+      if (!res.ok) throw new Error('Fehler beim Ändern des Modus')
+      setSuccess('Modus geändert')
+      setReload(r => r + 1)
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  // ---- GPT-Auswertung: KORREKT mit decisionId im Pfad ----
+  async function handleStartAI() {
+    setAiLoading(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await fetch(`/api/team-ai/recommendation/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          decisionName: name,
+          description,
+          options: options.map(o => ({ name: o.name, id: o.id })),
+          criteria: criteria.map(c => ({ name: c.name, id: c.id }))
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Fehler bei GPT-Auswertung')
+      setSuccess('KI-Auswertung erfolgreich')
+      setReload(r => r + 1)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   async function handleSaveAll() {
     setError(null)
     setSuccess(null)
     try {
-      // Speichere Metadaten (inkl. Name, Desc, Optionen, Kriterien)
+      if (aiEvaluated) return // Nach GPT alles readonly
       const cleanOptions = options.filter(o => o.name && o.name.trim() !== '' && !o._dup).map(({ name }) => ({ name }))
       const cleanCriteria = criteria.filter(c => c.name && c.name.trim() !== '' && !c._dup).map(({ name, importance }) => ({
         name,
@@ -154,15 +213,13 @@ export default function EditTeamDecision() {
         body: JSON.stringify({
           name,
           description,
-          mode: 'manual',
+          mode,
           type: 'team',
           options: cleanOptions,
           criteria: cleanCriteria
         })
       })
       if (!resMeta.ok) throw new Error('Fehler beim Speichern der Metadaten')
-
-      // Speichere Gewichtung
       await fetch(`/api/decision/${id}/weights`, {
         method: 'POST',
         headers: {
@@ -179,7 +236,6 @@ export default function EditTeamDecision() {
           })
         })
       })
-      // Speichere Bewertung
       await fetch(`/api/decision/${id}/evaluate`, {
         method: 'POST',
         headers: {
@@ -224,11 +280,31 @@ export default function EditTeamDecision() {
     )
   }
 
-  // --------- OWNER/ADMIN/EDITOR VIEW ---------
+  const disableAll = isClosed || aiEvaluated
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-2 md:px-6">
       <h2 className="text-2xl font-bold mb-6">✏️ Team-Entscheidung bearbeiten</h2>
-      {/* Titel & Beschreibung editierbar */}
+      {(userRole === 'owner' || userRole === 'admin') && (
+        <div className="mb-4">
+          <label className="block text-gray-600 font-semibold mb-2">Modus:</label>
+          <select
+            value={mode}
+            onChange={handleModeChange}
+            disabled={aiEvaluated}
+            className="p-2 border rounded bg-white text-black dark:bg-neutral-800 dark:text-white"
+          >
+            <option value="manual">Manuell</option>
+            <option value="ai">KI-Auswertung (automatisch)</option>
+          </select>
+          {aiEvaluated && (
+            <div className="mt-2 p-2 bg-blue-100 text-blue-800 rounded">
+              Die Entscheidung wurde bereits von der KI ausgewertet. Alle Felder sind schreibgeschützt.
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mb-8">
         <label className="block text-gray-500 mb-1 font-semibold">Titel</label>
         <input
@@ -236,17 +312,16 @@ export default function EditTeamDecision() {
           value={name}
           onChange={e => setName(e.target.value)}
           className="mb-4 p-2 border rounded w-full"
-          disabled={isClosed}
+          disabled={disableAll}
         />
         <label className="block text-gray-500 mb-1 font-semibold">Beschreibung</label>
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           className="mb-4 p-2 border rounded w-full"
-          disabled={isClosed}
+          disabled={disableAll}
           rows={2}
         />
-        {/* Deadline: nur Owner/Admin, aber IMMER änderbar */}
         {(userRole === 'owner' || userRole === 'admin') && (
           <div className="mb-6">
             <label className="block text-gray-500 mb-1 font-semibold">Deadline (optional)</label>
@@ -256,6 +331,7 @@ export default function EditTeamDecision() {
               onChange={e => setDeadline(e.target.value)}
               min={getMinDeadline()}
               className="mb-2 p-2 border rounded w-full"
+              disabled={disableAll}
             />
             <div className="flex gap-4 mt-1 flex-wrap items-center">
               <button
@@ -263,12 +339,13 @@ export default function EditTeamDecision() {
                 onClick={() => { setDeadline(''); saveDeadline('') }}
                 className="text-sm text-gray-500 underline"
                 style={{ display: deadline ? 'inline' : 'none' }}
+                disabled={disableAll}
               >Deadline löschen</button>
               <button
                 type="button"
                 onClick={() => saveDeadline(deadline)}
                 className="text-sm text-indigo-700 underline"
-                disabled={!deadline}
+                disabled={!deadline || disableAll}
               >Deadline speichern</button>
               {deadline && <span className="text-xs text-gray-400 ml-2">Aktuelle Deadline: {new Date(deadline).toLocaleString()}</span>}
               {!deadline && <span className="text-xs text-gray-400 ml-2">Keine Deadline gesetzt</span>}
@@ -277,7 +354,6 @@ export default function EditTeamDecision() {
             <hr className="my-4 border-gray-200 dark:border-gray-800" />
           </div>
         )}
-        {/* Optionen */}
         <label className="block text-gray-500 mb-1 font-semibold">Optionen</label>
         <div className="space-y-2 mb-4">
           {options.map((opt, idx) => (
@@ -287,17 +363,16 @@ export default function EditTeamDecision() {
                 onChange={e => handleOptionChange(idx, e.target.value)}
                 placeholder={`Option ${idx + 1}`}
                 className={`flex-1 p-2 border rounded ${dupClass(opt)}`}
-                disabled={isClosed}
+                disabled={disableAll}
               />
               {opt._dup && (
                 <span className="text-red-500 text-xs font-bold">Duplikat</span>
               )}
-              <button type="button" className="text-red-500 text-xl" onClick={() => removeOption(idx)} title="Option löschen" disabled={isClosed}>×</button>
+              <button type="button" className="text-red-500 text-xl" onClick={() => removeOption(idx)} title="Option löschen" disabled={disableAll}>×</button>
             </div>
           ))}
-          <button type="button" onClick={addOption} className="mt-2 text-blue-600" disabled={isClosed}>+ Option hinzufügen</button>
+          <button type="button" onClick={addOption} className="mt-2 text-blue-600" disabled={disableAll}>+ Option hinzufügen</button>
         </div>
-        {/* Kriterien */}
         <label className="block text-gray-500 mb-1 font-semibold mt-4">Kriterien <span className="text-gray-400 text-xs">(ohne Gewichtung!)</span></label>
         <div className="space-y-2">
           {criteria.map((c, idx) => (
@@ -307,23 +382,38 @@ export default function EditTeamDecision() {
                 onChange={e => handleCriterionChange(idx, 'name', e.target.value)}
                 placeholder={`Kriterium ${idx + 1}`}
                 className={`flex-1 p-2 border rounded ${dupClass(c)}`}
-                disabled={isClosed}
+                disabled={disableAll}
               />
-              <button type="button" className="text-red-500 text-xl ml-2" onClick={() => removeCriterion(idx)} title="Kriterium löschen" disabled={isClosed}>×</button>
+              <button type="button" className="text-red-500 text-xl ml-2" onClick={() => removeCriterion(idx)} title="Kriterium löschen" disabled={disableAll}>×</button>
             </div>
           ))}
-          <button type="button" onClick={addCriterion} className="mt-2 text-blue-600" disabled={isClosed}>+ Kriterium hinzufügen</button>
+          <button type="button" onClick={addCriterion} className="mt-2 text-blue-600" disabled={disableAll}>+ Kriterium hinzufügen</button>
         </div>
       </div>
 
-      {/* Bewertung & Gewichtung */}
+      {/* GPT-Auswertung */}
+      {(mode === 'ai' && !aiEvaluated && (userRole === 'owner' || userRole === 'admin')) && (
+        <div className="mb-8">
+          <button
+            className="bg-blue-800 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg w-full"
+            onClick={handleStartAI}
+            disabled={aiLoading || disableAll}
+          >
+            {aiLoading ? 'GPT-Auswertung läuft …' : 'GPT-Auswertung starten'}
+          </button>
+          <div className="text-xs text-gray-400 mt-2">
+            Nach der KI-Auswertung wird diese Entscheidung automatisch abgeschlossen.
+          </div>
+        </div>
+      )}
+
       <section className="mt-10">
         <TeamCriterionWeighting
           criteria={criteria}
           weights={weights}
           setWeights={setWeights}
           userRole={userRole}
-          disabled={isClosed}
+          disabled={disableAll}
         />
       </section>
       <section className="mt-10">
@@ -333,26 +423,33 @@ export default function EditTeamDecision() {
           evaluations={evaluations}
           setEvaluations={setEvaluations}
           userRole={userRole}
-          disabled={isClosed}
+          disabled={disableAll}
         />
       </section>
 
-      {/* Nur noch EIN Save-Button */}
-      <div className="mt-10 text-right">
-        <button
-          className="bg-indigo-600 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg"
-          onClick={handleSaveAll}
-          disabled={
-            isClosed ||
-            options.some(o => o._dup) ||
-            criteria.some(c => c._dup)
-          }
-        >
-          💾 Alles speichern
-        </button>
-        {success && <div className="text-green-600 mt-2">{success}</div>}
-        {error && <div className="text-red-600 mt-2">{error}</div>}
-      </div>
+      {!aiEvaluated && (
+        <div className="mt-10 text-right">
+          <button
+            className="bg-indigo-600 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg"
+            onClick={handleSaveAll}
+            disabled={
+              disableAll ||
+              options.some(o => o._dup) ||
+              criteria.some(c => c._dup)
+            }
+          >
+            💾 Alles speichern
+          </button>
+          {success && <div className="text-green-600 mt-2">{success}</div>}
+          {error && <div className="text-red-600 mt-2">{error}</div>}
+        </div>
+      )}
+      {aiEvaluated && (
+        <div className="mt-10 text-center text-blue-900 dark:text-blue-200 font-semibold text-lg">
+          Diese Entscheidung wurde durch die KI bewertet und ist abgeschlossen.<br />
+          Alle Eingaben sind schreibgeschützt.
+        </div>
+      )}
     </div>
   )
 }
