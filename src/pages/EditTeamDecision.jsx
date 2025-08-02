@@ -1,455 +1,610 @@
-import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { useAuthStore } from '../store/useAuthStore'
-import EvaluateTeamDecision from './EvaluateTeamDecision'
-import TeamCriterionWeighting from '../components/TeamCriterionWeighting'
+import React, { useEffect, useState, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/useAuthStore";
+import EvaluateTeamDecision from "./EvaluateTeamDecision";
+import TeamCriterionWeighting from "../components/TeamCriterionWeighting";
+
 
 export default function EditTeamDecision() {
-  const { id } = useParams()
-  const { user, token } = useAuthStore()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
-  const [reload, setReload] = useState(0)
+ const { id } = useParams();
+ const navigate = useNavigate();
+ const { user, token } = useAuthStore();
 
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [options, setOptions] = useState([])
-  const [criteria, setCriteria] = useState([])
-  const [userRole, setUserRole] = useState('viewer')
-  const [evaluations, setEvaluations] = useState([])
-  const [weights, setWeights] = useState([])
-  const [deadline, setDeadline] = useState('')
-  const [mode, setMode] = useState('manual')
-  const [aiEvaluated, setAiEvaluated] = useState(false)
-  const [aiLoading, setAiLoading] = useState(false)
 
-  // Deadline-Check
-  const deadlineDate = deadline ? new Date(deadline) : null
-  const now = new Date()
-  const isClosed = !!deadlineDate && now > deadlineDate
+ const [loading, setLoading] = useState(true);
+ const [error, setError] = useState(null);
+ const [success, setSuccess] = useState(null);
+ const [reload, setReload] = useState(0);
 
-  useEffect(() => {
-    async function fetchAll() {
-      setLoading(true)
-      try {
-        const res = await fetch(`/api/decision/${id}/details`, { headers: { Authorization: `Bearer ${token}` } })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Fehler beim Laden')
-        setName(json.decision.name || '')
-        setDescription(json.decision.description || '')
-        setOptions(Array.isArray(json.options) ? json.options : [])
-        setCriteria(Array.isArray(json.criteria) ? json.criteria.map(c => ({
-          ...c,
-          importance: typeof c.importance === 'number' ? c.importance : (c.importance ? Number(c.importance) : 0)
-        })) : [])
-        setUserRole(json.userRole)
-        setDeadline(json.timer || '')
-        setMode(json.decision.mode || 'manual')
-        // Erkenne KI-Auswertung: mind. eine Bewertung von 'ai'
-        setAiEvaluated(Array.isArray(json.evaluations) && json.evaluations.some(e => e.generated_by === 'ai'))
 
-        if (json.weightsByUser && user && user.id) {
-          setWeights(json.weightsByUser[user.id] || [])
-        } else {
-          setWeights([])
-        }
-        if (user && Array.isArray(json.evaluations)) {
-          const userEvals = json.evaluations.filter(e => String(e.user_id) === String(user.id))
-          if (userEvals.length === 0 && json.options.length && json.criteria.length) {
-            const blank = []
-            json.options.forEach(o => {
-              json.criteria.forEach(c => {
-                blank.push({ option_id: o.id, criterion_id: c.id, value: '' })
-              })
-            })
-            setEvaluations(blank)
-          } else {
-            setEvaluations(userEvals)
-          }
-        }
-        setSuccess(null)
-        setError(null)
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-    if (user && id && token) fetchAll()
-    // eslint-disable-next-line
-  }, [user, id, token, reload])
+ const [name, setName] = useState("");
+ const [description, setDescription] = useState("");
+ const [options, setOptions] = useState([]);
+ const [criteria, setCriteria] = useState([]);
+ const [userRole, setUserRole] = useState("viewer");
+ const [evaluations, setEvaluations] = useState([]);
+ const [weights, setWeights] = useState([]);
+ const [deadline, setDeadline] = useState("");
+ const [mode, setMode] = useState("manual");
+ const [aiEvaluated, setAiEvaluated] = useState(false);
+ const [aiLoading, setAiLoading] = useState(false);
 
-  // Helpers
-  function isDuplicate(array, key, value, idx) {
-    return array.some((item, i) =>
-      i !== idx &&
-      item[key] &&
-      value &&
-      item[key].trim().toLowerCase() === value.trim().toLowerCase()
-    )
-  }
-  const handleOptionChange = (idx, value) => setOptions(o =>
-    o.map((op, i) =>
-      i === idx
-        ? isDuplicate(o, 'name', value, idx)
-          ? { ...op, name: value, _dup: true }
-          : { ...op, name: value, _dup: false }
-        : { ...op, _dup: false }
-    )
-  )
-  const addOption = () => setOptions([
-    ...options,
-    { name: '', id: `opt-new-${Date.now()}-${Math.random().toString(36).slice(2)}`, _dup: false }
-  ])
-  const removeOption = idx => setOptions(options.filter((_, i) => i !== idx))
-  const handleCriterionChange = (idx, key, value) => setCriteria(cr =>
-    cr.map((c, i) =>
-      i === idx
-        ? isDuplicate(cr, 'name', value, idx)
-          ? { ...c, [key]: value, _dup: true }
-          : { ...c, [key]: value, _dup: false }
-        : { ...c, _dup: false }
-    )
-  )
-  const addCriterion = () => setCriteria([
-    ...criteria,
-    { name: '', importance: '', id: `crit-new-${Date.now()}-${Math.random().toString(36).slice(2)}`, _dup: false }
-  ])
-  const removeCriterion = idx => setCriteria(criteria.filter((_, i) => i !== idx))
-  function dupClass(obj) {
-    return obj._dup ? 'border-2 border-red-500 bg-red-50 dark:bg-red-900' : ''
-  }
 
-  function getMinDeadline() {
-    const now = new Date(Date.now() + 5 * 60000)
-    return now.toISOString().slice(0, 16)
-  }
+ const deadlineInputRef = useRef(null);
+ const deadlineDate = deadline ? new Date(deadline) : null;
+ const now = new Date();
+ const disable = (deadlineDate && now > deadlineDate) || aiEvaluated;
 
-  async function saveDeadline(newTimer) {
-    setError(null)
-    try {
-      const res = await fetch(`/api/decision/${id}/timer`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ timer: newTimer || null })
-      })
-      if (!res.ok) throw new Error('Fehler beim Speichern der Deadline')
-      setSuccess('Deadline gespeichert!')
-      setReload(r => r + 1)
-    } catch (err) {
-      setError(err.message)
-    }
-  }
 
-  async function handleModeChange(e) {
-    const value = e.target.value
-    if (aiEvaluated) return // Keine Änderung nach KI-Auswertung
-    setMode(value)
-    try {
-      const res = await fetch(`/api/decision/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name,
-          description,
-          mode: value,
-          type: 'team',
-          options: options.map(({ name }) => ({ name })),
-          criteria: criteria.map(({ name, importance }) => ({ name, importance }))
-        })
-      })
-      if (!res.ok) throw new Error('Fehler beim Ändern des Modus')
-      setSuccess('Modus geändert')
-      setReload(r => r + 1)
-    } catch (err) {
-      setError(err.message)
-    }
-  }
+ useEffect(() => {
+   async function fetchAll() {
+     setLoading(true);
+     try {
+       const res = await fetch(`/api/decision/${id}/details`, {
+         headers: { Authorization: `Bearer ${token}` },
+       });
+       const json = await res.json();
+       if (!res.ok) throw new Error(json.error || "Fehler beim Laden");
 
-  // ---- GPT-Auswertung: KORREKT mit decisionId im Pfad ----
-  async function handleStartAI() {
-    setAiLoading(true)
-    setError(null)
-    setSuccess(null)
-    try {
-      const res = await fetch(`/api/team-ai/recommendation/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          decisionName: name,
-          description,
-          options: options.map(o => ({ name: o.name, id: o.id })),
-          criteria: criteria.map(c => ({ name: c.name, id: c.id }))
-        })
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler bei GPT-Auswertung')
-      setSuccess('KI-Auswertung erfolgreich')
-      setReload(r => r + 1)
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setAiLoading(false)
-    }
-  }
 
-  async function handleSaveAll() {
-    setError(null)
-    setSuccess(null)
-    try {
-      if (aiEvaluated) return // Nach GPT alles readonly
-      const cleanOptions = options.filter(o => o.name && o.name.trim() !== '' && !o._dup).map(({ name }) => ({ name }))
-      const cleanCriteria = criteria.filter(c => c.name && c.name.trim() !== '' && !c._dup).map(({ name, importance }) => ({
-        name,
-        importance: importance === '' || importance == null ? 0 : Number(importance)
-      }))
-      const resMeta = await fetch(`/api/decision/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          name,
-          description,
-          mode,
-          type: 'team',
-          options: cleanOptions,
-          criteria: cleanCriteria
-        })
-      })
-      if (!resMeta.ok) throw new Error('Fehler beim Speichern der Metadaten')
-      await fetch(`/api/decision/${id}/weights`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          weights: criteria.map(c => {
-            const entry = weights.find(w => w.criterion_id === c.id)
-            return {
-              criterion_id: c.id,
-              weight: entry && typeof entry.weight === 'number' ? entry.weight : Number(entry && entry.weight) || 0
-            }
-          })
-        })
-      })
-      await fetch(`/api/decision/${id}/evaluate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          evaluations: evaluations
-            .filter(e => e.value !== '' && !isNaN(Number(e.value)))
-            .map(e => ({
-              option_id: e.option_id,
-              criterion_id: e.criterion_id,
-              value: Number(e.value)
-            }))
-        })
-      })
-      setSuccess('Gespeichert!')
-      setTimeout(() => setSuccess(null), 2000)
-      setReload(r => r + 1)
-    } catch (err) {
-      setError('Fehler beim Speichern.')
-    }
-  }
+       setName(json.decision?.name ?? "");
+       setDescription(json.decision?.description ?? "");
+       setOptions(Array.isArray(json.options) ? json.options : []);
+       setCriteria(
+         Array.isArray(json.criteria)
+           ? json.criteria.map((c) => ({
+               ...c,
+               importance: typeof c.importance === "number" ? c.importance : Number(c.importance) || 0,
+             }))
+           : []
+       );
+       setUserRole(json.userRole ?? "viewer");
+       setDeadline(json.timer ?? "");
+       setMode(json.decision?.mode ?? "manual");
+       setAiEvaluated(json.evaluations?.some((e) => e.generated_by === "ai") || false);
+       if (json.weightsByUser && user?.id) {
+         setWeights(json.weightsByUser[user.id] ?? []);
+       } else {
+         setWeights([]);
+       }
+       if (user && Array.isArray(json.evaluations)) {
+         const userEvals = json.evaluations.filter((e) => String(e.user_id) === String(user.id));
+         if (userEvals.length === 0 && json.options.length && json.criteria.length) {
+           let blanks = [];
+           for (const o of json.options) {
+             for (const c of json.criteria) {
+               blanks.push({ option_id: o.id, criterion_id: c.id, value: "" });
+             }
+           }
+           setEvaluations(blanks);
+         } else {
+           setEvaluations(userEvals);
+         }
+       }
+       setSuccess(null);
+       setError(null);
+     } catch (e) {
+       setError(e.message);
+     } finally {
+       setLoading(false);
+     }
+   }
+   if (user && id && token) fetchAll();
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [user, id, token, reload]);
 
-  if (loading) return <div className="p-8">⏳ Lädt…</div>
-  if (error) return <div className="text-red-500 p-8">{error}</div>
-  if (userRole === 'viewer') {
-    return (
-      <div className="max-w-3xl mx-auto py-8 px-2 md:px-6">
-        <h2 className="text-2xl font-bold mb-6">Team-Entscheidung bewerten</h2>
-        <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mb-10">
-          <div className="mb-4">
-            <label className="block text-gray-600 font-semibold mb-2">Optionen:</label>
-            <ul className="list-disc ml-6">{options.map((opt, i) => <li key={opt.id || i}>{opt.name}</li>)}</ul>
-          </div>
-          <div>
-            <label className="block text-gray-600 font-semibold mb-2">Kriterien:</label>
-            <ul className="list-disc ml-6">{criteria.map((c, i) => <li key={c.id || i}>{c.name}</li>)}</ul>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
-  const disableAll = isClosed || aiEvaluated
+ function isDuplicate(arr, key, value, idx) {
+   if (!value || typeof value !== "string") return false;
+   return arr.some((item, i) => i !== idx && item[key]?.trim().toLowerCase() === value.trim().toLowerCase());
+ }
 
-  return (
-    <div className="max-w-3xl mx-auto py-8 px-2 md:px-6">
-      <h2 className="text-2xl font-bold mb-6">✏️ Team-Entscheidung bearbeiten</h2>
-      {(userRole === 'owner' || userRole === 'admin') && (
-        <div className="mb-4">
-          <label className="block text-gray-600 font-semibold mb-2">Modus:</label>
-          <select
-            value={mode}
-            onChange={handleModeChange}
-            disabled={aiEvaluated}
-            className="p-2 border rounded bg-white text-black dark:bg-neutral-800 dark:text-white"
-          >
-            <option value="manual">Manuell</option>
-            <option value="ai">KI-Auswertung (automatisch)</option>
-          </select>
-          {aiEvaluated && (
-            <div className="mt-2 p-2 bg-blue-100 text-blue-800 rounded">
-              Die Entscheidung wurde bereits von der KI ausgewertet. Alle Felder sind schreibgeschützt.
-            </div>
-          )}
-        </div>
-      )}
 
-      <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mb-8">
-        <label className="block text-gray-500 mb-1 font-semibold">Titel</label>
-        <input
-          type="text"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          className="mb-4 p-2 border rounded w-full"
-          disabled={disableAll}
-        />
-        <label className="block text-gray-500 mb-1 font-semibold">Beschreibung</label>
-        <textarea
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          className="mb-4 p-2 border rounded w-full"
-          disabled={disableAll}
-          rows={2}
-        />
-        {(userRole === 'owner' || userRole === 'admin') && (
-          <div className="mb-6">
-            <label className="block text-gray-500 mb-1 font-semibold">Deadline (optional)</label>
-            <input
-              type="datetime-local"
-              value={deadline ? deadline.slice(0, 16) : ''}
-              onChange={e => setDeadline(e.target.value)}
-              min={getMinDeadline()}
-              className="mb-2 p-2 border rounded w-full"
-              disabled={disableAll}
-            />
-            <div className="flex gap-4 mt-1 flex-wrap items-center">
-              <button
-                type="button"
-                onClick={() => { setDeadline(''); saveDeadline('') }}
-                className="text-sm text-gray-500 underline"
-                style={{ display: deadline ? 'inline' : 'none' }}
-                disabled={disableAll}
-              >Deadline löschen</button>
-              <button
-                type="button"
-                onClick={() => saveDeadline(deadline)}
-                className="text-sm text-indigo-700 underline"
-                disabled={!deadline || disableAll}
-              >Deadline speichern</button>
-              {deadline && <span className="text-xs text-gray-400 ml-2">Aktuelle Deadline: {new Date(deadline).toLocaleString()}</span>}
-              {!deadline && <span className="text-xs text-gray-400 ml-2">Keine Deadline gesetzt</span>}
-              {isClosed && <span className="text-xs text-red-500 ml-4">Deadline abgelaufen – Bearbeitung gesperrt.</span>}
-            </div>
-            <hr className="my-4 border-gray-200 dark:border-gray-800" />
-          </div>
-        )}
-        <label className="block text-gray-500 mb-1 font-semibold">Optionen</label>
-        <div className="space-y-2 mb-4">
-          {options.map((opt, idx) => (
-            <div key={opt.id || `opt-${opt.name}-${idx}`} className="flex gap-2 items-center">
-              <input
-                value={opt.name}
-                onChange={e => handleOptionChange(idx, e.target.value)}
-                placeholder={`Option ${idx + 1}`}
-                className={`flex-1 p-2 border rounded ${dupClass(opt)}`}
-                disabled={disableAll}
-              />
-              {opt._dup && (
-                <span className="text-red-500 text-xs font-bold">Duplikat</span>
-              )}
-              <button type="button" className="text-red-500 text-xl" onClick={() => removeOption(idx)} title="Option löschen" disabled={disableAll}>×</button>
-            </div>
-          ))}
-          <button type="button" onClick={addOption} className="mt-2 text-blue-600" disabled={disableAll}>+ Option hinzufügen</button>
-        </div>
-        <label className="block text-gray-500 mb-1 font-semibold mt-4">Kriterien <span className="text-gray-400 text-xs">(ohne Gewichtung!)</span></label>
-        <div className="space-y-2">
-          {criteria.map((c, idx) => (
-            <div key={c.id || `crit-${c.name}-${idx}`} className="flex gap-2 items-center">
-              <input
-                value={c.name}
-                onChange={e => handleCriterionChange(idx, 'name', e.target.value)}
-                placeholder={`Kriterium ${idx + 1}`}
-                className={`flex-1 p-2 border rounded ${dupClass(c)}`}
-                disabled={disableAll}
-              />
-              <button type="button" className="text-red-500 text-xl ml-2" onClick={() => removeCriterion(idx)} title="Kriterium löschen" disabled={disableAll}>×</button>
-            </div>
-          ))}
-          <button type="button" onClick={addCriterion} className="mt-2 text-blue-600" disabled={disableAll}>+ Kriterium hinzufügen</button>
-        </div>
-      </div>
+ function dupClass(obj) {
+   return obj._dup ? "border-2 border-red-600 bg-red-700 text-red-100" : "";
+ }
 
-      {/* GPT-Auswertung */}
-      {(mode === 'ai' && !aiEvaluated && (userRole === 'owner' || userRole === 'admin')) && (
-        <div className="mb-8">
-          <button
-            className="bg-blue-800 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg w-full"
-            onClick={handleStartAI}
-            disabled={aiLoading || disableAll}
-          >
-            {aiLoading ? 'GPT-Auswertung läuft …' : 'GPT-Auswertung starten'}
-          </button>
-          <div className="text-xs text-gray-400 mt-2">
-            Nach der KI-Auswertung wird diese Entscheidung automatisch abgeschlossen.
-          </div>
-        </div>
-      )}
 
-      <section className="mt-10">
-        <TeamCriterionWeighting
-          criteria={criteria}
-          weights={weights}
-          setWeights={setWeights}
-          userRole={userRole}
-          disabled={disableAll}
-        />
-      </section>
-      <section className="mt-10">
-        <EvaluateTeamDecision
-          options={options}
-          criteria={criteria}
-          evaluations={evaluations}
-          setEvaluations={setEvaluations}
-          userRole={userRole}
-          disabled={disableAll}
-        />
-      </section>
+ const handleOptionChange = (idx, val) => {
+   const v = val.trimStart();
+   setOptions((opts) =>
+     opts.map((o, i) => (i === idx ? { ...o, name: v, _dup: isDuplicate(opts, "name", v, idx) } : { ...o, _dup: false }))
+   );
+ };
 
-      {!aiEvaluated && (
-        <div className="mt-10 text-right">
-          <button
-            className="bg-indigo-600 text-white px-8 py-3 rounded-lg shadow font-semibold text-lg"
-            onClick={handleSaveAll}
-            disabled={
-              disableAll ||
-              options.some(o => o._dup) ||
-              criteria.some(c => c._dup)
-            }
-          >
-            💾 Alles speichern
-          </button>
-          {success && <div className="text-green-600 mt-2">{success}</div>}
-          {error && <div className="text-red-600 mt-2">{error}</div>}
-        </div>
-      )}
-      {aiEvaluated && (
-        <div className="mt-10 text-center text-blue-900 dark:text-blue-200 font-semibold text-lg">
-          Diese Entscheidung wurde durch die KI bewertet und ist abgeschlossen.<br />
-          Alle Eingaben sind schreibgeschützt.
-        </div>
-      )}
-    </div>
-  )
+
+ const addOption = () =>
+   setOptions((opts) => [...opts, { name: "", id: `opt-new-${Date.now()}-${Math.random()}`, _dup: false }]);
+ const removeOption = (idx) => setOptions((opts) => opts.filter((_, i) => i !== idx));
+
+
+ const handleCriterionChange = (idx, key, val) => {
+   const v = typeof val === "string" ? val.trimStart() : val;
+   setCriteria((crits) =>
+     crits.map((c, i) => (i === idx ? { ...c, [key]: v, _dup: isDuplicate(crits, "name", v, idx) } : { ...c, _dup: false }))
+   );
+ };
+
+
+ const addCriterion = () =>
+   setCriteria((crits) => [...crits, { name: "", importance: "", id: `crit-new-${Date.now()}-${Math.random()}`, _dup: false }]);
+ const removeCriterion = (idx) => setCriteria((crits) => crits.filter((_, i) => i !== idx));
+
+
+ const getMinDeadline = () => new Date(Date.now() + 5 * 60000).toISOString().slice(0, 16);
+
+
+ async function handleDeadlineChange(newDeadline) {
+   if (newDeadline === deadline) return;
+   setDeadline(newDeadline);
+   try {
+     setError(null);
+     setSuccess(null);
+     const res = await fetch(`/api/decision/${id}/timer`, {
+       method: "PATCH",
+       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+       body: JSON.stringify({ timer: newDeadline || null }),
+     });
+     if (!res.ok) throw new Error("Fehler beim Speichern");
+     setSuccess("Deadline gespeichert");
+     setTimeout(() => setSuccess(null), 4000);
+     setReload((r) => r + 1);
+   } catch (e) {
+     setError(e.message);
+   }
+ }
+
+
+ async function handleModeChange(e) {
+   const v = e.target.value;
+   if (aiEvaluated) return;
+   setMode(v);
+   try {
+     setError(null);
+     setSuccess(null);
+     const res = await fetch(`/api/decision/${id}`, {
+       method: "PUT",
+       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+       body: JSON.stringify({
+         name,
+         description,
+         mode: v,
+         type: "team",
+         options: options.filter((o) => o.name && !o._dup).map(({ name }) => ({ name })),
+         criteria: criteria.filter((c) => c.name && !c._dup).map(({ name, importance }) => ({ name, importance })),
+       }),
+     });
+     if (!res.ok) throw new Error("Fehler beim Ändern");
+     setSuccess("Modus geändert");
+     setTimeout(() => setSuccess(null), 3000);
+     setReload((r) => r + 1);
+   } catch (e) {
+     setError(e.message);
+   }
+ }
+
+
+ // NEU: handleSaveAll gibt true/false zurück
+ async function handleSaveAll() {
+   if (aiEvaluated) return true; // Blockiert weiteres Speichern bei abgeschlossener KI.
+   try {
+     setError(null);
+     setSuccess(null);
+     setLoading(true);
+     const cleanOptions = options.filter((o) => o.name && !o._dup).map(({ name }) => ({ name }));
+     const cleanCriteria = criteria
+       .filter((c) => c.name && !c._dup)
+       .map(({ name, importance }) => ({ name, importance: Number(importance) || 0 }));
+     const res = await fetch(`/api/decision/${id}`, {
+       method: "PUT",
+       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+       body: JSON.stringify({ name, description, mode, type: "team", options: cleanOptions, criteria: cleanCriteria }),
+     });
+     if (!res.ok) throw new Error("Fehler beim Speichern");
+
+
+     await fetch(`/api/decision/${id}/weights`, {
+       method: "POST",
+       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+       body: JSON.stringify({ weights }),
+     });
+
+
+     await fetch(`/api/decision/${id}/evaluate`, {
+       method: "POST",
+       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+       body: JSON.stringify({
+         evaluations: evaluations
+           .filter((ev) => ev.value !== "" && !isNaN(ev.value))
+           .map(({ option_id, criterion_id, value }) => ({ option_id, criterion_id, value: Number(value) })),
+       }),
+     });
+
+
+     setSuccess("Gespeichert");
+     setTimeout(() => setSuccess(null), 4000);
+     setReload((r) => r + 1);
+     return true;
+   } catch (e) {
+     setError(e.message || "Fehler beim Speichern");
+     return false;
+   } finally {
+     setLoading(false);
+   }
+ }
+
+
+ // NEU: Automatisch speichern vor KI-Start!
+ async function handleStartAI() {
+   try {
+     setError(null);
+     setSuccess(null);
+     setAiLoading(true);
+
+
+     // Vorher speichern!
+     const saveOK = await handleSaveAll();
+     if (!saveOK) {
+       setError("Speichern fehlgeschlagen");
+       return;
+     }
+
+
+     // Dann KI-Auswertung anstoßen
+     const res = await fetch(`/api/team-ai/recommendation/${id}`, {
+       method: "POST",
+       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+       body: JSON.stringify({ decisionName: name, description, options, criteria }),
+     });
+     const data = await res.json();
+     if (!res.ok) throw new Error(data.error || "Fehler bei KI");
+     setSuccess("KI-Auswertung erfolgreich");
+     setTimeout(() => navigate(`/team-decision/${id}`), 1200);
+     setReload((r) => r + 1);
+   } catch (e) {
+     setError(e.message);
+   } finally {
+     setAiLoading(false);
+   }
+ }
+
+
+ const titleId = "title-input";
+ const descId = "desc-input";
+ const deadlineId = "deadline-input";
+
+
+ if (loading)
+   return (
+     <div className="p-8 text-center text-gray-500" aria-busy="true" aria-live="polite">
+       ⏳ Lädt …
+     </div>
+   );
+ if (error)
+   return (
+     <div
+       className="max-w-xl mx-auto p-8 text-center text-red-600"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true"
+     >
+       {error}
+     </div>
+   );
+
+
+ if (userRole === "viewer")
+   return (
+     <main className="max-w-4xl mx-auto p-8 bg-white dark:bg-gray-900 rounded-lg shadow-lg">
+       <h1 className="text-3xl mb-8 text-gray-900 dark:text-gray-100">Teamentscheidung ansehen</h1>
+       <section className="mb-10">
+         <h2 className="text-xl mb-4 text-gray-700 dark:text-gray-300">Optionen</h2>
+         <ul className="pl-6 list-disc text-gray-800 dark:text-gray-200">
+           {options.map((o) => (
+             <li key={o.id}>{o.name}</li>
+           ))}
+         </ul>
+       </section>
+       <section>
+         <h2 className="text-xl mb-4 text-gray-700 dark:text-gray-300">Kriterien</h2>
+         <ul className="pl-6 list-disc text-gray-800 dark:text-gray-200">
+           {criteria.map((o) => (
+             <li key={o.id}>{o.name}</li>
+           ))}
+         </ul>
+       </section>
+     </main>
+   );
+
+
+ return (
+   <main className="min-h-screen bg-transparent p-6 text-gray-900 dark:text-gray-100">
+     <div className="max-w-4xl mx-auto">
+       <h1 className="text-4xl font-semibold mb-10">Teamentscheidung bearbeiten</h1>
+
+
+       {(success || error) && (
+         <div
+           className={`max-w-xl mx-auto mb-6 p-4 rounded ${
+             success ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+           }`}
+           role="alert"
+           aria-live="assertive"
+           aria-atomic="true"
+         >
+           {success || error}
+         </div>
+       )}
+       <section
+         className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 space-y-10"
+         aria-label="Entscheidungsdaten und Einstellungen"
+       >
+         {/* Modus */}
+         {(userRole === "admin" || userRole === "owner") && (
+           <div>
+             <label htmlFor="mode-select" className="block mb-2 font-semibold text-gray-800 dark:text-gray-200">
+               Modus
+             </label>
+             <select
+               id="mode-select"
+               className="w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+               disabled={disable}
+               value={mode}
+               onChange={handleModeChange}
+             >
+               <option value="manual">Manuell</option>
+               <option value="ai">KI (Automatisch)</option>
+             </select>
+             {aiEvaluated && <p className="mt-2 text-indigo-600 dark:text-indigo-400">Diese Entscheidung ist durch die KI abgeschlossen und nicht mehr bearbeitbar.</p>}
+           </div>
+         )}
+
+
+         {/* Basisinfos */}
+         <div className="space-y-6">
+           <div>
+             <label htmlFor={titleId} className="block mb-2 font-semibold text-gray-800 dark:text-gray-200">
+               Titel
+             </label>
+             <input
+               id={titleId}
+               className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+               type="text"
+               value={name}
+               onChange={(e) => setName(e.target.value)}
+               disabled={disable}
+             />
+           </div>
+           <div>
+             <label htmlFor={descId} className="block mb-2 font-semibold text-gray-800 dark:text-gray-200">
+               Beschreibung
+             </label>
+             <textarea
+               id={descId}
+               rows={3}
+               className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 resize-none"
+               value={description}
+               onChange={(e) => setDescription(e.target.value)}
+               disabled={disable}
+             />
+           </div>
+         </div>
+
+
+         {/* Deadline */}
+         {(userRole === "admin" || userRole === "owner") && (
+           <div className="mt-6 max-w-sm">
+             <label htmlFor="deadline-input" className="block mb-2 font-semibold text-gray-800 dark:text-gray-200">
+               Deadline (optional)
+             </label>
+             <div className="relative">
+               <input
+                 id="deadline-input"
+                 ref={deadlineInputRef}
+                 type="datetime-local"
+                 className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-10 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+                 value={deadline ? deadline.slice(0, 16) : ""}
+                 min={getMinDeadline()}
+                 onChange={(e) => handleDeadlineChange(e.target.value)}
+                 disabled={disable}
+                 onClick={() => deadlineInputRef.current?.showPicker()}
+                 aria-disabled={disable}
+               />
+               <button
+                 type="button"
+                 onClick={() => {
+                   deadlineInputRef.current?.focus();
+                   deadlineInputRef.current?.showPicker();
+                 }}
+                 disabled={disable}
+                 aria-label="Datum auswählen"
+                 className="absolute left-3 top-1/2 -translate-y-1/2 rounded bg-transparent p-0 text-gray-400 dark:text-gray-500 hover:text-indigo-600 focus:outline-none"
+               >
+                 <svg
+                   xmlns="http://www.w3.org/2000/svg"
+                   className="w-5 h-5"
+                   fill="none"
+                   viewBox="0 0 24 24"
+                   stroke="currentColor"
+                   strokeWidth={1.5}
+                 >
+                   <rect x={3} y={4} width={18} height={18} rx={2} />
+                   <line x1={16} y1={2} x2={16} y2={6} />
+                   <line x1={8} y1={2} x2={8} y2={6} />
+                   <line x1={3} y1={10} x2={21} y2={10} />
+                 </svg>
+               </button>
+             </div>
+             <div className="mt-2 flex flex-wrap gap-4 items-center text-sm text-gray-600 dark:text-gray-400">
+               <button
+                 type="button"
+                 onClick={() => handleDeadlineChange("")}
+                 disabled={disable || !deadline}
+                 className="underline disabled:opacity-50"
+               >
+                 Deadline löschen
+               </button>
+               <span>{deadline ? `Aktuell: ${new Date(deadline).toLocaleString()}` : "Keine Deadline gesetzt"}</span>
+               {disable && (
+                 <span className="text-red-500 dark:text-red-400">Deadline abgelaufen – Bearbeitung gesperrt</span>
+               )}
+             </div>
+           </div>
+         )}
+
+
+         {/* Optionen */}
+         <section>
+           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+             Optionen <span className="text-sm text-gray-500">(Keine Duplikate)</span>
+           </h3>
+           {options.map((option, i) => (
+             <div key={option.id} className="flex items-center space-x-3 mb-3">
+               <input
+                 className={`flex-grow bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 ${dupClass(
+                   option
+                 )}`}
+                 type="text"
+                 value={option.name}
+                 placeholder={`Option ${i + 1}`}
+                 onChange={(e) => handleOptionChange(i, e.target.value)}
+                 disabled={disable}
+                 aria-invalid={option._dup}
+               />
+               {option._dup && (
+                 <span className="text-red-600" aria-label="Duplikat" role="alert">
+                   ⚠
+                 </span>
+               )}
+               <button
+                 onClick={() => removeOption(i)}
+                 disabled={disable}
+                 aria-label={`Option ${i + 1} löschen`}
+                 className="text-red-600 hover:text-red-700 disabled:opacity-50"
+               >
+                 ×
+               </button>
+             </div>
+           ))}
+           <button
+             onClick={addOption}
+             disabled={disable}
+             className="bg-indigo-600 text-white px-5 py-3 rounded hover:bg-indigo-700 disabled:opacity-50"
+           >
+             + Option hinzufügen
+           </button>
+         </section>
+
+
+         {/* Kriterien */}
+         <section className="mt-10">
+           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
+             Kriterien <span className="text-sm text-gray-500">(Keine Duplikate, keine Gewichtung)</span>
+           </h3>
+           {criteria.map((criterion, i) => (
+             <div key={criterion.id} className="flex items-center space-x-3 mb-3">
+               <input
+                 className={`flex-grow bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 ${dupClass(
+                   criterion
+                 )}`}
+                 type="text"
+                 value={criterion.name}
+                 placeholder={`Kriterium ${i + 1}`}
+                 onChange={(e) => handleCriterionChange(i, "name", e.target.value)}
+                 disabled={disable}
+                 aria-invalid={criterion._dup}
+               />
+               {criterion._dup && (
+                 <span className="text-red-600" aria-label="Duplikat" role="alert">
+                   ⚠
+                 </span>
+               )}
+               <button
+                 onClick={() => removeCriterion(i)}
+                 disabled={disable}
+                 aria-label={`Kriterium ${i + 1} löschen`}
+                 className="text-red-600 hover:text-red-700 disabled:opacity-50"
+               >
+                 ×
+               </button>
+             </div>
+           ))}
+           <button
+             onClick={addCriterion}
+             disabled={disable}
+             className="bg-indigo-600 text-white px-5 py-3 rounded hover:bg-indigo-700 disabled:opacity-50"
+           >
+             + Kriterium hinzufügen
+           </button>
+         </section>
+       </section>
+
+
+       {/* Gewichtung */}
+       <section className="max-w-4xl mx-auto mt-12">
+         <TeamCriterionWeighting
+           weights={weights}
+           setWeights={setWeights}
+           criteria={criteria}
+           userRole={userRole}
+           disabled={disable}
+         />
+       </section>
+
+
+       {/* Bewertung */}
+       {mode === "manual" && !aiEvaluated && (
+         <section className="max-w-6xl mx-auto mt-12">
+           <EvaluateTeamDecision
+             evaluations={evaluations}
+             setEvaluations={setEvaluations}
+             options={options}
+             criteria={criteria}
+             userRole={userRole}
+             disabled={disable}
+           />
+         </section>
+       )}
+
+
+       {/* SPEICHERN: IMMER sichtbar solange keine KI-Auswertung */}
+       {!aiEvaluated && (
+         <section className="max-w-6xl mx-auto mt-12 flex justify-end">
+           <button
+             onClick={handleSaveAll}
+             disabled={disable || options.some((o) => o._dup) || criteria.some((c) => c._dup) || loading}
+             className="bg-indigo-600 py-3 px-8 rounded text-white font-semibold hover:bg-indigo-700 disabled:opacity-50"
+           >
+             {loading ? "Speichert..." : "Speichern"}
+           </button>
+         </section>
+       )}
+
+
+       {/* KI-AUSWERTEN: kleiner und dezent */}
+       {mode === "ai" && !aiEvaluated && (userRole === "admin" || userRole === "owner") && (
+         <section className="max-w-6xl mx-auto mt-8 flex justify-end">
+           <button
+             onClick={handleStartAI}
+             disabled={disable || aiLoading}
+             className="bg-indigo-700 py-2 px-6 rounded text-white text-base font-semibold hover:bg-indigo-800 disabled:opacity-50 transition"
+             style={{ minWidth: 220 }}
+           >
+             {aiLoading ? "KI Auswertung läuft..." : "KI Auswertung starten"}
+           </button>
+         </section>
+       )}
+
+
+       {/* KI-Abschluss Hinweis */}
+       {aiEvaluated && (
+         <section className="max-w-6xl mx-auto mt-12 text-center text-gray-500">
+           Diese Entscheidung wurde durch die KI abgeschlossen und ist nicht mehr bearbeitbar.
+         </section>
+       )}
+     </div>
+   </main>
+ );
 }
+
+
