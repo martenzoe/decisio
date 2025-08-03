@@ -28,12 +28,12 @@ function History() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <h2 className="text-2xl font-bold">📁 Meine Entscheidungen</h2>
+      <h2 className="text-2xl font-bold">📁 My Decisions</h2>
 
-      {loading && <p>Lade deine gespeicherten Entscheidungen...</p>}
+      {loading && <p>Loading your saved decisions...</p>}
 
       {!loading && decisions.length === 0 && (
-        <p className="text-gray-600">Du hast noch keine Entscheidungen gespeichert.</p>
+        <p className="text-gray-600">You have not saved any decisions yet.</p>
       )}
 
       {!loading && decisions.length > 0 && (
@@ -41,12 +41,12 @@ function History() {
           {decisions.map((d) => (
             <li key={d.id} className="border p-4 rounded shadow-sm bg-white">
               <h3 className="text-xl font-semibold">{d.name}</h3>
-              <p className="text-sm text-gray-500">Erstellt am {new Date(d.created_at).toLocaleString()}</p>
+              <p className="text-sm text-gray-500">Created on {new Date(d.created_at).toLocaleString()}</p>
               <Link
                 to={`/decision/${d.id}`}
                 className="text-blue-600 underline text-sm"
               >
-                🔍 Details ansehen
+                🔍 View Details
               </Link>
             </li>
           ))}

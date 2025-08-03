@@ -327,12 +327,12 @@ export default function TeamDecisionDetail() {
               >
                 <span className="text-2xl mr-2">{m.voted ? '✅' : '⏳'}</span>
                 <div>
-                  <span className="font-semibold">{m.users?.nickname || m.email || 'Unbekannt'}</span>
+                  <span className="font-semibold">{m.users?.nickname || m.email || 'Unknown'}</span>
                   <div className="text-xs text-gray-500">
-                    Rolle: {m.role}
+                    Role: {m.role}
                     {m.voted
-                      ? <span className="ml-2 text-green-700">Abgestimmt</span>
-                      : <span className="ml-2 text-yellow-700">Ausstehend</span>}
+                      ? <span className="ml-2 text-green-700">Voted</span>
+                      : <span className="ml-2 text-yellow-700">Pending</span>}
                   </div>
                 </div>
               </div>
@@ -361,7 +361,7 @@ export default function TeamDecisionDetail() {
                   </span>
                 </th>
               ))}
-              <th className="border px-4 py-2">Team-Ergebnis</th>
+              <th className="border px-4 py-2">Team-Result</th>
             </tr>
           </thead>
 
@@ -424,16 +424,16 @@ export default function TeamDecisionDetail() {
         </table>
         <div className="text-xs text-gray-400 mt-2">
           {isAIResult
-            ? <>Diese Entscheidung wurde automatisch von der KI bewertet. Begründungen stehen in den Zellen. Das Team-Ergebnis ist das gewichtete Resultat aller KI-Bewertungen.</>
-            : <>Die Gewichtung (in Klammern) ist der Team-Durchschnitt oder die voreingestellte Gewichtung.<br />
-            Die Ergebnisse sind für alle Teammitglieder identisch. Änderungen gehen nur über die Bewertungsmaske.</>
+            ? <>This decision has been automatically evaluated by AI. Justifications can be found in the cells. The team result is the weighted outcome of all AI evaluations.</>
+            : <>The weighting (in parentheses) is the team average or the default weighting.<br />
+            The results are identical for all team members. Changes can only be made through the evaluation mask.</>
           }
         </div>
       </div>
 
       {/* Kommentare */}
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
-        <h3 className="text-xl font-semibold">💬 Kommentare</h3>
+        <h3 className="text-xl font-semibold">💬 Comments</h3>
         <form onSubmit={handleCommentSubmit} className="flex flex-col sm:flex-row gap-4">
           <input
             ref={inputRef}
@@ -443,7 +443,7 @@ export default function TeamDecisionDetail() {
             className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-900 dark:border-gray-600"
           />
           <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
-            {editingId ? '💾 Speichern' : '➕ Posten'}
+            {editingId ? '💾 Save' : '➕ Post'}
           </button>
         </form>
         <div className="space-y-4">
@@ -461,8 +461,8 @@ export default function TeamDecisionDetail() {
                 </div>
                 {String(user?.id) === String(c.user_id) && (
                   <div className="flex gap-2 text-sm mt-1">
-                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Bearbeiten</button>
-                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Löschen</button>
+                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Delete</button>
                   </div>
                 )}
               </div>

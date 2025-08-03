@@ -14,7 +14,7 @@ export default function TeamCriterionWeighting({
   if (!criteria.length) {
     return (
       <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8 text-gray-500 text-center">
-        Noch keine Kriterien vorhanden. Sobald Kriterien definiert sind, kannst du hier deine Gewichtung abgeben.
+        No criteria defined yet. Once criteria are defined, you can specify your weighting here.
       </div>
     )
   }
@@ -41,18 +41,18 @@ export default function TeamCriterionWeighting({
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8">
       <h3 className="text-lg font-bold mb-2">
-        Deine Gewichtung der Kriterien <span className="text-sm text-gray-400">(optional)</span>
+        Your weighting of the criteria <span className="text-sm text-gray-400">(optional)</span>
       </h3>
       {disabled && (
         <div className="mb-4 p-2 bg-red-100 text-red-800 rounded text-sm font-bold text-center">
-          Deadline abgelaufen, Gewichtung nicht mehr möglich.
+          Deadline expired, weighting no longer possible.
         </div>
       )}
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="border px-2 py-1">Kriterium</th>
-            <th className="border px-2 py-1">Wichtigkeit (0-100)</th>
+            <th className="border px-2 py-1">Criterion</th>
+            <th className="border px-2 py-1">Importance (0-100)</th>
           </tr>
         </thead>
         <tbody>

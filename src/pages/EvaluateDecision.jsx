@@ -119,12 +119,12 @@ function EvaluateDecision() {
     }
   }
 
-  if (loading) return <p className="p-4">⏳ Lädt...</p>
-  if (!decision) return <p className="p-4">❌ Entscheidung nicht gefunden.</p>
+  if (loading) return <p className="p-4">⏳ loading...</p>
+  if (!decision) return <p className="p-4">❌ decision not found.</p>
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <h2 className="text-2xl font-bold">🧮 Bewertung: {decision.name}</h2>
+      <h2 className="text-2xl font-bold">🧮 Evaluation: {decision.name}</h2>
 
       {decision.mode === 'manual' && (
         <>
@@ -132,7 +132,7 @@ function EvaluateDecision() {
             <table className="w-full border mt-4 text-sm">
               <thead>
                 <tr>
-                  <th className="border px-3 py-2 text-left bg-gray-100">Option \ Kriterium</th>
+                  <th className="border px-3 py-2 text-left bg-gray-100">Option \ Criterion</th>
                   {criteria.map((crit) => (
                     <th key={crit.id} className="border px-3 py-2 text-left bg-gray-100">
                       {crit.name} ({crit.weight}%)
@@ -170,14 +170,14 @@ function EvaluateDecision() {
             onClick={handleSave}
             className="bg-blue-600 text-white px-4 py-2 rounded mt-4"
           >
-            💾 Bewertungen speichern
+            💾 Save Evaluations
           </button>
         </>
       )}
 
       {decision.mode === 'ai' && (
         <>
-          <p className="text-sm text-gray-600">🤖 KI hat auf Basis deiner Beschreibung & Kriterien bewertet:</p>
+          <p className="text-sm text-gray-600">🤖 AI has evaluated based on your description & criteria:</p>
 
           <ul className="space-y-4 mt-4">
             {gptScores.map((entry, idx) => (

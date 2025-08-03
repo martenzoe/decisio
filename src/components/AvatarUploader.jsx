@@ -62,7 +62,7 @@ function AvatarUploader({ avatarUrl, onUpload }) {
         />
       </label>
       {uploading && (
-        <div className="mt-2 text-sm text-gray-500">Wird hochgeladen …</div>
+        <div className="mt-2 text-sm text-gray-500">uploading…</div>
       )}
     </div>
   )

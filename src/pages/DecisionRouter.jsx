@@ -47,7 +47,7 @@ function DecisionRouter() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-500 dark:text-gray-300">
-        ⏳ Entscheidung wird geladen …
+        ⏳ Loading decision …
       </div>
     )
   }

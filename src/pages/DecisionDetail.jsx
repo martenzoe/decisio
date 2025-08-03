@@ -1,4 +1,3 @@
-// src/pages/DecisionDetail.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
@@ -32,7 +31,7 @@ export default function DecisionDetail() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()
-      if (!res.ok || !json.decision) throw new Error(json.error || 'Keine Entscheidung gefunden')
+      if (!res.ok || !json.decision) throw new Error(json.error || 'No decision found')
       setData(json)
     } catch (err) {
       setError(err.message)
@@ -47,7 +46,7 @@ export default function DecisionDetail() {
       const json = await res.json()
       setComments(Array.isArray(json) ? json : [])
     } catch (err) {
-      console.error('❌ Fehler beim Laden der Kommentare:', err)
+      console.error('❌ Error loading comments:', err)
     }
   }
 
@@ -83,7 +82,7 @@ export default function DecisionDetail() {
   }
 
   async function handleDelete(commentId) {
-    if (!window.confirm('Kommentar wirklich löschen?')) return
+    if (!window.confirm('Are you sure you want to delete this comment?')) return
     const res = await fetch(`/api/comments/${commentId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
@@ -92,7 +91,7 @@ export default function DecisionDetail() {
   }
 
   if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
-  if (!user || !data) return <div className="text-gray-400 text-center mt-10">⏳ Lade Entscheidung …</div>
+  if (!user || !data) return <div className="text-gray-400 text-center mt-10">⏳ Loading decision…</div>
 
   const { decision, options = [], criteria = [], evaluations = [] } = data
 
@@ -122,7 +121,7 @@ export default function DecisionDetail() {
               {criteria.map(c => (
                 <th key={c.id} className="border px-4 py-2">{c.name}</th>
               ))}
-              <th className="border px-4 py-2">Gesamt</th>
+              <th className="border px-4 py-2">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -146,18 +145,18 @@ export default function DecisionDetail() {
 
       {/* Comments Section */}
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
-        <h3 className="text-xl font-semibold">💬 Kommentare</h3>
+        <h3 className="text-xl font-semibold">💬 Comments</h3>
 
         <form onSubmit={handleCommentSubmit} className="flex flex-col sm:flex-row gap-4">
           <input
             ref={inputRef}
             value={commentInput}
             onChange={e => setCommentInput(e.target.value)}
-            placeholder="Kommentiere hier …"
+            placeholder="Write a comment…"
             className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-900 dark:border-gray-600"
           />
           <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
-            {editingId ? '💾 Speichern' : '➕ Posten'}
+            {editingId ? '💾 Save' : '➕ Post'}
           </button>
         </form>
 
@@ -167,7 +166,7 @@ export default function DecisionDetail() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="font-medium text-sm">
-                    {c.nickname ? `@${c.nickname}` : 'Anonym'}
+                    {c.nickname ? `@${c.nickname}` : 'Anonymous'}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">{c.text}</p>
                   <p className="text-xs text-gray-400">
@@ -177,8 +176,8 @@ export default function DecisionDetail() {
 
                 {String(user?.id) === String(c.user_id) && (
                   <div className="flex gap-2 text-sm mt-1">
-                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Bearbeiten</button>
-                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Löschen</button>
+                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Edit</button>
+                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Delete</button>
                   </div>
                 )}
               </div>

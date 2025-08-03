@@ -277,7 +277,7 @@ export default function EditTeamDecision() {
  if (loading)
    return (
      <div className="p-8 text-center text-gray-500" aria-busy="true" aria-live="polite">
-       ⏳ Lädt …
+       ⏳ loading …
      </div>
    );
  if (error)
@@ -320,7 +320,7 @@ export default function EditTeamDecision() {
  return (
    <main className="min-h-screen bg-transparent p-6 text-gray-900 dark:text-gray-100">
      <div className="max-w-4xl mx-auto">
-       <h1 className="text-4xl font-semibold mb-10">Teamentscheidung bearbeiten</h1>
+       <h1 className="text-4xl font-semibold mb-10">Edit Team Decision</h1>
 
 
        {(success || error) && (
@@ -352,10 +352,10 @@ export default function EditTeamDecision() {
                value={mode}
                onChange={handleModeChange}
              >
-               <option value="manual">Manuell</option>
-               <option value="ai">KI (Automatisch)</option>
+               <option value="manual">Manual</option>
+               <option value="ai">AI (Auto)</option>
              </select>
-             {aiEvaluated && <p className="mt-2 text-indigo-600 dark:text-indigo-400">Diese Entscheidung ist durch die KI abgeschlossen und nicht mehr bearbeitbar.</p>}
+             {aiEvaluated && <p className="mt-2 text-indigo-600 dark:text-indigo-400">This decision has been completed by AI and is no longer editable.</p>}
            </div>
          )}
 
@@ -377,7 +377,7 @@ export default function EditTeamDecision() {
            </div>
            <div>
              <label htmlFor={descId} className="block mb-2 font-semibold text-gray-800 dark:text-gray-200">
-               Beschreibung
+               Description
              </label>
              <textarea
                id={descId}
@@ -442,11 +442,11 @@ export default function EditTeamDecision() {
                  disabled={disable || !deadline}
                  className="underline disabled:opacity-50"
                >
-                 Deadline löschen
+                 Clear deadline
                </button>
-               <span>{deadline ? `Aktuell: ${new Date(deadline).toLocaleString()}` : "Keine Deadline gesetzt"}</span>
+                <span>{deadline ? `Current: ${new Date(deadline).toLocaleString()}` : "No deadline set"}</span>
                {disable && (
-                 <span className="text-red-500 dark:text-red-400">Deadline abgelaufen – Bearbeitung gesperrt</span>
+                 <span className="text-red-500 dark:text-red-400">Deadline expired – editing disabled</span>
                )}
              </div>
            </div>
@@ -456,7 +456,7 @@ export default function EditTeamDecision() {
          {/* Optionen */}
          <section>
            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-             Optionen <span className="text-sm text-gray-500">(Keine Duplikate)</span>
+             Options <span className="text-sm text-gray-500">(No duplicates)</span>
            </h3>
            {options.map((option, i) => (
              <div key={option.id} className="flex items-center space-x-3 mb-3">
@@ -491,7 +491,7 @@ export default function EditTeamDecision() {
              disabled={disable}
              className="bg-indigo-600 text-white px-5 py-3 rounded hover:bg-indigo-700 disabled:opacity-50"
            >
-             + Option hinzufügen
+             + Add Option
            </button>
          </section>
 
@@ -499,7 +499,7 @@ export default function EditTeamDecision() {
          {/* Kriterien */}
          <section className="mt-10">
            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-             Kriterien <span className="text-sm text-gray-500">(Keine Duplikate, keine Gewichtung)</span>
+             Criteria <span className="text-sm text-gray-500">(No duplicates, no weighting)</span>
            </h3>
            {criteria.map((criterion, i) => (
              <div key={criterion.id} className="flex items-center space-x-3 mb-3">
@@ -534,7 +534,7 @@ export default function EditTeamDecision() {
              disabled={disable}
              className="bg-indigo-600 text-white px-5 py-3 rounded hover:bg-indigo-700 disabled:opacity-50"
            >
-             + Kriterium hinzufügen
+             + Add Criterion
            </button>
          </section>
        </section>
@@ -575,7 +575,7 @@ export default function EditTeamDecision() {
              disabled={disable || options.some((o) => o._dup) || criteria.some((c) => c._dup) || loading}
              className="bg-indigo-600 py-3 px-8 rounded text-white font-semibold hover:bg-indigo-700 disabled:opacity-50"
            >
-             {loading ? "Speichert..." : "Speichern"}
+             {loading ? "Saving..." : "Save"}
            </button>
          </section>
        )}
@@ -590,7 +590,7 @@ export default function EditTeamDecision() {
              className="bg-indigo-700 py-2 px-6 rounded text-white text-base font-semibold hover:bg-indigo-800 disabled:opacity-50 transition"
              style={{ minWidth: 220 }}
            >
-             {aiLoading ? "KI Auswertung läuft..." : "KI Auswertung starten"}
+             {aiLoading ? "AI evaluation running…" : "Start AI evaluation"}
            </button>
          </section>
        )}
@@ -599,7 +599,7 @@ export default function EditTeamDecision() {
        {/* KI-Abschluss Hinweis */}
        {aiEvaluated && (
          <section className="max-w-6xl mx-auto mt-12 text-center text-gray-500">
-           Diese Entscheidung wurde durch die KI abgeschlossen und ist nicht mehr bearbeitbar.
+           This decision has been completed by AI and is no longer editable.
          </section>
        )}
      </div>

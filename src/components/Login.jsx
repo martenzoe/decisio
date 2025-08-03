@@ -34,7 +34,7 @@ function Login() {
       setToken(token)
       console.log('✅ Login: Token & User gesetzt', { token, user })
 
-      setMessage('✅ Login erfolgreich!')
+      setMessage('✅ Login successful!')
 
       const inviteToken = localStorage.getItem('pendingInviteToken')
       const isFresh = localStorage.getItem('inviteTokenFresh') === 'true'
@@ -47,10 +47,9 @@ function Login() {
         localStorage.removeItem('inviteTokenFresh')
         navigate('/dashboard')
       }
-
     } catch (err) {
-      console.error('❌ Login-Fehler:', err)
-      setMessage(err.message || 'Fehler beim Login')
+      console.error('❌ Login error:', err)
+      setMessage(err.message || 'Login failed')
     }
   }
 

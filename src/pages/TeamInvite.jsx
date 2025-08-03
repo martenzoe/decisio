@@ -21,16 +21,16 @@ function TeamInvite() {
   const [decisionDetails, setDecisionDetails] = useState(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
 
-  // Team-Mitglieder laden
+  // Load team members
   const fetchTeamMembers = async () => {
     setLoading(true)
     try {
-      if (!token) throw new Error('Kein gültiger Token gefunden')
+      if (!token) throw new Error('No valid token found')
       const res = await fetch(`/api/team/team-members/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler beim Laden')
+      if (!res.ok) throw new Error(data.error || 'Error loading team members')
       setTeamMembers(data)
     } catch (err) {
       setError(err.message)
@@ -39,7 +39,7 @@ function TeamInvite() {
     }
   }
 
-  // Entscheidung + Details laden für robusten PUT
+  // Load decision + details for robust PUT
   const fetchDecisionDetails = async () => {
     setDetailsLoading(true)
     try {
@@ -48,10 +48,10 @@ function TeamInvite() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Details konnten nicht geladen werden')
+      if (!res.ok) throw new Error(data.error || 'Failed to load details')
       setDecisionDetails(data)
     } catch (err) {
-      setActivateError('Fehler beim Laden der Entscheidungsdetails: ' + err.message)
+      setActivateError('Error loading decision details: ' + err.message)
     } finally {
       setDetailsLoading(false)
     }
@@ -69,7 +69,7 @@ function TeamInvite() {
     setInviteLink('')
 
     try {
-      if (!token) throw new Error('Kein gültiger Token gefunden')
+      if (!token) throw new Error('No valid token found')
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: {
@@ -80,7 +80,7 @@ function TeamInvite() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Einladung fehlgeschlagen')
+      if (!res.ok) throw new Error(data.error || 'Invitation failed')
 
       setSuccess(data.message)
       if (data.token || data.invite_token) {
@@ -100,16 +100,16 @@ function TeamInvite() {
     if (detailsLoading) return
 
     try {
-      if (!token) throw new Error('Kein gültiger Token gefunden')
-      if (!decisionDetails?.decision) throw new Error('Entscheidungsdaten fehlen')
+      if (!token) throw new Error('No valid token found')
+      if (!decisionDetails?.decision) throw new Error('Missing decision data')
 
-      // Nur Titel ist Pflicht!
+      // Only the name is required!
       if (!decisionDetails.decision.name) {
-        setActivateError('Name darf nicht leer sein.')
+        setActivateError('Name must not be empty.')
         return
       }
 
-      // Optionen und Kriterien dürfen leer sein, werden aber sauber formatiert
+      // Options and criteria may be empty but must be well formatted
       const optionList = Array.isArray(decisionDetails.options)
         ? decisionDetails.options.map(o => ({ name: o.name })).filter(o => o.name?.trim())
         : []
@@ -128,19 +128,19 @@ function TeamInvite() {
         evaluations: []
       })
 
-      setActivateSuccess('Entscheidung wurde aktiviert.')
+      setActivateSuccess('Decision has been activated.')
       navigate('/dashboard')
     } catch (err) {
-      setActivateError('Aktivierung fehlgeschlagen: ' + err.message)
+      setActivateError('Activation failed: ' + err.message)
     }
   }
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <h2 className="text-2xl font-bold">Team-Einladung</h2>
+      <h2 className="text-2xl font-bold">Team Invitation</h2>
 
       <div className="space-y-2">
-        <label className="block font-medium">E-Mail-Adresse</label>
+        <label className="block font-medium">Email Address</label>
         <input
           type="email"
           className="w-full border rounded p-2"
@@ -148,7 +148,7 @@ function TeamInvite() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        <label className="block font-medium mt-4">Rolle</label>
+        <label className="block font-medium mt-4">Role</label>
         <select
           className="w-full border rounded p-2"
           value={role}
@@ -162,7 +162,7 @@ function TeamInvite() {
           onClick={handleInvite}
           className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
         >
-          Einladung senden
+          Send Invitation
         </button>
 
         {success && <p className="text-green-600 mt-2">{success}</p>}
@@ -170,21 +170,21 @@ function TeamInvite() {
 
         {inviteLink && (
           <div className="mt-4 p-3 bg-gray-100 dark:bg-neutral-800 rounded">
-            <p className="text-sm">🔗 Einladung kopieren:</p>
+            <p className="text-sm">🔗 Copy Invitation Link:</p>
             <code className="block break-words">{inviteLink}</code>
           </div>
         )}
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mt-6 mb-2">Teammitglieder</h3>
+        <h3 className="text-lg font-semibold mt-6 mb-2">Team Members</h3>
         {loading ? (
-          <p>⏳ Lädt ...</p>
+          <p>⏳ Loading…</p>
         ) : (
           <ul className="divide-y">
             {teamMembers.map((m) => (
               <li key={m.id} className="py-2">
-                👤 {m.users?.nickname || 'Unbekannt'} – {m.role} {m.accepted ? '✅' : '⏳'}
+                👤 {m.users?.nickname || 'Unknown'} – {m.role} {m.accepted ? '✅' : '⏳'}
               </li>
             ))}
           </ul>
@@ -197,7 +197,7 @@ function TeamInvite() {
           className="bg-green-600 text-white px-4 py-2 rounded"
           disabled={detailsLoading}
         >
-          Entscheidung aktivieren
+          Activate Decision
         </button>
         {activateSuccess && <p className="text-green-600 mt-2">{activateSuccess}</p>}
         {activateError && <p className="text-red-600 mt-2">{activateError}</p>}

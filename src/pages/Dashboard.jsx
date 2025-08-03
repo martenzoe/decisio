@@ -25,13 +25,13 @@ function Dashboard() {
     const fetchDecisions = async () => {
       setLoading(true)
       try {
-        if (!token) throw new Error('Kein gültiger Token verfügbar')
+        if (!token) throw new Error('No valid token available')
         const res = await fetch('https://decisio.onrender.com/api/decision', {
           headers: { Authorization: `Bearer ${token}` },
         })
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Entscheidungen')
-        if (!Array.isArray(data)) throw new Error('Ungültige Datenstruktur')
+        if (!res.ok) throw new Error(data.error || 'Error loading decisions')
+        if (!Array.isArray(data)) throw new Error('Invalid data structure')
 
         const unique = Array.from(new Map(data.map(d => [d.id, d])).values())
         setDecisions(unique)

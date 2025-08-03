@@ -13,7 +13,7 @@ export default function EvaluateTeamDecision({
   if (!canEdit) {
     return (
       <div className="text-gray-500 my-8">
-        Du hast Leserechte – Bewertung ist für diese Rolle nicht möglich.
+        You have read-only access – evaluation is not possible for this role.
       </div>
     )
   }
@@ -38,10 +38,10 @@ export default function EvaluateTeamDecision({
 
   return (
     <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow mt-8">
-      <h3 className="text-lg font-bold mb-2">Deine Bewertung</h3>
+      <h3 className="text-lg font-bold mb-2">Your Evaluation</h3>
       {disabled && (
         <div className="mb-4 p-2 bg-red-100 text-red-800 rounded text-sm font-bold text-center">
-          Deadline abgelaufen. Voting nicht mehr möglich.
+          Deadline expired. Voting is no longer possible.
         </div>
       )}
       <table className="w-full border-collapse">

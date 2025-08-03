@@ -71,13 +71,13 @@ function NotificationsPage() {
       <Navbar />
 
       <main className="flex-grow max-w-3xl w-full mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-4">Benachrichtigungen</h1>
+        <h1 className="text-2xl font-bold mb-4">Notifications</h1>
 
-        {loading && <p>⏳ Lade ...</p>}
+        {loading && <p>⏳ Loading ...</p>}
         {error && <p className="text-red-600">❌ {error}</p>}
 
         {notifications.length === 0 && !loading && (
-          <p className="text-gray-500 dark:text-gray-400">Keine Benachrichtigungen</p>
+          <p className="text-gray-500 dark:text-gray-400">No notifications</p>
         )}
 
         <ul className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -94,7 +94,7 @@ function NotificationsPage() {
                   onClick={() => handleAccept(n)}
                   className="text-sm text-blue-600 hover:underline"
                 >
-                  Annehmen
+                  Accept
                 </button>
               )}
             </li>

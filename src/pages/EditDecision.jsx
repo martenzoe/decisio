@@ -106,11 +106,11 @@ function EditDecision() {
     }
   };
 
-  if (loading) return <div className="p-8">⏳ Lädt...</div>;
+  if (loading) return <div className="p-8">⏳ loading...</div>;
 
   return (
     <div className="max-w-4xl mx-auto p-8">
-      <h2 className="text-2xl font-bold mb-4">✏️ Entscheidung bearbeiten</h2>
+      <h2 className="text-2xl font-bold mb-4">✏️ Edit Decision</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <input
           type="text"
@@ -133,13 +133,13 @@ function EditDecision() {
             <option value="ai">AI</option>
           </select>
           <select value={type} onChange={e => setType(e.target.value)} className="p-2 border rounded">
-            <option value="private">Privat</option>
-            <option value="public">Öffentlich</option>
+            <option value="private">Private</option>
+            <option value="public">Public</option>
           </select>
         </div>
 
         <div>
-          <h3 className="font-semibold">⚙️ Optionen</h3>
+          <h3 className="font-semibold">⚙️ Options</h3>
           {options.map((opt, i) => (
             <input
               key={opt.id}
@@ -156,7 +156,7 @@ function EditDecision() {
         </div>
 
         <div>
-          <h3 className="font-semibold">📊 Kriterien</h3>
+          <h3 className="font-semibold">📊 Criteria</h3>
           {criteria.map((crit, i) => (
             <div key={crit.id} className="flex gap-2 mb-2">
               <input
@@ -184,7 +184,7 @@ function EditDecision() {
         </div>
 
         <div>
-          <h3 className="font-semibold mb-2">🔢 Bewertungen</h3>
+          <h3 className="font-semibold mb-2">🔢 Evaluations</h3>
           <table className="min-w-full border">
             <thead>
               <tr>
@@ -217,7 +217,7 @@ function EditDecision() {
         </div>
 
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-          💾 Speichern
+          💾 Save
         </button>
       </form>
     </div>

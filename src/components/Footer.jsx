@@ -10,10 +10,10 @@ function Footer() {
         </p>
         <div className="flex gap-6 text-gray-600 dark:text-gray-400">
           <Link to="/impressum" className="hover:text-[#4F46E5] dark:hover:text-white transition">
-            Impressum
+            Legal Notice
           </Link>
           <Link to="/datenschutz" className="hover:text-[#4F46E5] dark:hover:text-white transition">
-            Datenschutz
+            Privacy Policy
           </Link>
         </div>
       </div>

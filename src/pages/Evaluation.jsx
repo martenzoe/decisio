@@ -37,12 +37,12 @@ function Evaluation() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold">📊 Bewertung</h2>
+      <h2 className="text-2xl font-bold">📊 Evaluation</h2>
 
       <table className="w-full border text-left">
         <thead>
           <tr>
-            <th className="border px-3 py-2">Kriterium</th>
+            <th className="border px-3 py-2">Criterion</th>
             {options.map((option) => (
               <th key={option} className="border px-3 py-2">{option}</th>
             ))}
@@ -76,12 +76,12 @@ function Evaluation() {
         onClick={calculate}
         className="bg-green-600 text-white px-4 py-2 rounded"
       >
-        ➕ Score berechnen
+        ➕ Calculate Score
       </button>
 
       {result && (
         <div className="mt-6 space-y-2">
-          <h3 className="text-xl font-bold">🏆 Ergebnis</h3>
+          <h3 className="text-xl font-bold">🏆 Result</h3>
           <ul className="list-disc pl-6">
             {result.map((res, index) => (
               <li key={res.option}>

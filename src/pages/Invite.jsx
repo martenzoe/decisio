@@ -97,7 +97,7 @@ function Invite() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-white">
-        <p className="text-xl">⏳ Einladung wird geprüft …</p>
+        <p className="text-xl">⏳ Checking invitation …</p>
       </div>
     )
   }
@@ -105,7 +105,7 @@ function Invite() {
   if (status === 'error') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-red-100 text-red-600">
-        <p className="text-xl">❌ Ungültiger oder abgelaufener Einladungslink.</p>
+        <p className="text-xl">❌ Invalid or expired invitation link.</p>
       </div>
     )
   }
@@ -114,24 +114,24 @@ function Invite() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-white">
         <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg p-8 max-w-md w-full space-y-4 text-center">
-          <h2 className="text-2xl font-bold">Einladung zu Decisia</h2>
-          <p>Du wurdest zur Entscheidung eingeladen.</p>
-          <p>Rolle: <strong>{info?.role || 'Mitglied'}</strong></p>
+          <h2 className="text-2xl font-bold">Invitation to Decisia</h2>
+          <p>You have been invited to the decision.</p>
+          <p>Role: <strong>{info?.role || 'Member'}</strong></p>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Bitte melde dich an oder registriere dich, um beizutreten.
+            Please log in or register to join.
           </p>
           <div className="flex justify-center gap-4 mt-6">
             <a
               href="/login"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
             >
-              Anmelden
+              Log In
             </a>
             <a
               href="/register"
               className="bg-gray-300 hover:bg-gray-400 text-black px-4 py-2 rounded transition"
             >
-              Registrieren
+              Register
             </a>
           </div>
         </div>
@@ -142,7 +142,7 @@ function Invite() {
   if (status === 'ready' && user && jwt) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-white">
-        <p className="text-xl">✅ Einladung angenommen. Weiterleitung …</p>
+        <p className="text-xl">✅ Invitation accepted. Redirecting …</p>
       </div>
     )
   }
