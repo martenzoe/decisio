@@ -3,9 +3,13 @@ import { useState, useEffect } from "react";
 import AvatarUploader from "./AvatarUploader";
 import { getProfile, updateProfile } from "../api/profile";
 import { useAuthStore } from "../store/useAuthStore";
+import { useTranslation } from "react-i18next";
 
 function ProfileForm() {
+  // -> alle Keys unter "profile.*"
+  const { t } = useTranslation(undefined, { keyPrefix: "profile" });
   const { user } = useAuthStore();
+
   const [form, setForm] = useState({
     nickname: "",
     avatar_url: "",
@@ -32,7 +36,7 @@ function ProfileForm() {
     if (!user?.id) return;
     try {
       await updateProfile(user.id, form);
-      alert("✅ Profile saved.");
+      alert(t("saved")); // vorher: t("profile.saved")
     } catch (err) {
       console.error("Save failed:", err.message);
     }
@@ -44,7 +48,7 @@ function ProfileForm() {
       className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6 space-y-6"
     >
       <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-white">
-        Edit Profile
+        {t("title")}
       </h2>
 
       <div className="flex justify-center">
@@ -56,7 +60,7 @@ function ProfileForm() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Nickname
+          {t("nickname")}
         </label>
         <input
           type="text"
@@ -69,7 +73,7 @@ function ProfileForm() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          First Name
+          {t("firstName")}
         </label>
         <input
           type="text"
@@ -82,7 +86,7 @@ function ProfileForm() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Last Name
+          {t("lastName")}
         </label>
         <input
           type="text"
@@ -95,7 +99,7 @@ function ProfileForm() {
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Birthday
+          {t("birthday")}
         </label>
         <input
           type="date"
@@ -111,7 +115,7 @@ function ProfileForm() {
           type="submit"
           className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold"
         >
-          Save
+          {t("save")}
         </button>
       </div>
     </form>

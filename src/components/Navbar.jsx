@@ -1,15 +1,21 @@
-// src/components/Navbar.jsx
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
+import { useLanguageStore } from '../store/useLanguageStore'
 import logo from '../assets/decisia-logo.png'
 import defaultAvatar from '../assets/default-avatar.png'
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function Navbar() {
   const location = useLocation()
   const navigate = useNavigate()
-
   const { user, token, setUser } = useAuthStore()
+  const { lang, toggleLang } = useLanguageStore()
+  const { t, i18n } = useTranslation()
+
+  useEffect(() => {
+    i18n.changeLanguage(lang)
+  }, [lang, i18n])
 
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
   const [open, setOpen] = useState(false)
@@ -19,11 +25,12 @@ function Navbar() {
   const avatarUrl = user?.avatar_url || defaultAvatar
   const nickname = user?.nickname || 'User'
 
+  // Anpassung: label ist jetzt ein Key (siehe JSON)
   const navItems = [
-    { path: '/', label: 'Home' },
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/faq', label: 'FAQ' },
-    { path: '/kontakt', label: 'Contact' }
+    { path: '/', label: 'navbar.home' },
+    { path: '/dashboard', label: 'navbar.dashboard' },
+    { path: '/faq', label: 'navbar.faq' },
+    { path: '/kontakt', label: 'navbar.contact' }
   ]
 
   useEffect(() => {
@@ -59,11 +66,9 @@ function Navbar() {
       if (Array.isArray(result)) {
         setNotifications(result)
       } else {
-        console.warn('⚠️ Keine gültigen Benachrichtigungen:', result)
         setNotifications([])
       }
     } catch (err) {
-      console.error('❌ Fehler beim Laden der Benachrichtigungen:', err)
       setNotifications([])
     }
   }
@@ -76,9 +81,7 @@ function Navbar() {
       })
       fetchNotifications()
       if (link) navigate(link)
-    } catch (err) {
-      console.error('❌ Fehler beim Bestätigen:', err)
-    }
+    } catch (err) {}
   }
 
   useEffect(() => {
@@ -107,17 +110,27 @@ function Navbar() {
                   : 'text-gray-700 dark:text-gray-300 hover:text-[#4F46E5]'
               }`}
             >
-              {item.label}
+              {t(item.label)}
             </Link>
           ))}
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Language Switcher */}
+          <button
+            onClick={toggleLang}
+            className="px-2 py-1 rounded-xl border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition focus:outline-none"
+            aria-label={t('navbar.switchLang')}
+          >
+            {lang === 'en' ? 'DE' : 'EN'}
+          </button>
+
+          {/* Dark Mode Button */}
           <button
             onClick={toggleTheme}
             className="text-gray-600 dark:text-gray-200 text-sm border border-gray-300 dark:border-gray-600 rounded-full px-3 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
           >
-            {darkMode ? '🌙 Dark' : '☀️ Light'}
+            {darkMode ? `🌙 ${t('navbar.dark')}` : `☀️ ${t('navbar.light')}`}
           </button>
 
           {/* Glocke */}
@@ -125,6 +138,7 @@ function Navbar() {
             <button
               onClick={() => setNotifOpen(!notifOpen)}
               className="relative text-gray-600 dark:text-gray-200"
+              aria-label={t('navbar.notifications')}
             >
               🔔
               {unreadCount > 0 && (
@@ -144,13 +158,13 @@ function Navbar() {
                     }}
                     className="text-sm text-blue-600 hover:underline"
                   >
-                    🔍 Alle Benachrichtigungen anzeigen
+                    🔍 {t('navbar.seeAllNotifications')}
                   </button>
                 </div>
 
                 {notifications.length === 0 ? (
                   <div className="p-4 text-sm text-gray-500 dark:text-gray-300">
-                    Keine Benachrichtigungen
+                    {t('navbar.noNotifications')}
                   </div>
                 ) : (
                   notifications.map((n) => (
@@ -164,7 +178,7 @@ function Navbar() {
                           onClick={() => handleAccept(n.id, n.link)}
                           className="mt-1 text-xs text-blue-600 hover:underline"
                         >
-                          Annehmen
+                          {t('navbar.accept')}
                         </button>
                       )}
                     </div>
@@ -178,6 +192,7 @@ function Navbar() {
             <button
               onClick={() => setOpen(!open)}
               className="flex items-center gap-2 rounded-full focus:outline-none"
+              aria-label={t('navbar.profileMenu')}
             >
               <span className="text-sm font-medium text-gray-800 dark:text-white hidden md:block">
                 {nickname}
@@ -195,19 +210,19 @@ function Navbar() {
                   to="/profile"
                   className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  👤 Edit Profile
+                  👤 {t('navbar.editProfile')}
                 </Link>
                 <Link
                   to="/change-password"
                   className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  🔐 Change Password
+                  🔐 {t('navbar.changePassword')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
-                  🚪 Logout
+                  🚪 {t('navbar.logout')}
                 </button>
               </div>
             )}

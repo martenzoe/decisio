@@ -1,0 +1,317 @@
+{
+  "navbar": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "switchLang": "Switch language",
+    "dark": "Dark",
+    "light": "Light",
+    "notifications": "Notifications",
+    "seeAllNotifications": "See all notifications",
+    "noNotifications": "No notifications",
+    "accept": "Accept",
+    "profileMenu": "Profile menu",
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "yourDecisions": "Your decisions",
+    "createdCount": "You have created <strong>{{count}}</strong> decisions.",
+    "newDecision": "New Decision",
+    "newTeamDecision": "New Team Decision",
+    "searchPlaceholder": "🔍 Search by title...",
+    "filterNewest": "Newest",
+    "filterSolo": "Solo",
+    "filterTeam": "Team",
+    "filterManual": "Manual",
+    "filterAI": "AI",
+    "loading": "Loading decisions…",
+    "noDecisions": "No decisions found.",
+    "team": "TEAM",
+    "solo": "SOLO",
+    "mode": "Mode",
+    "manual": "🧠 Manual",
+    "ai": "🤖 AI",
+    "score": "Score",
+    "created": "Created",
+    "updated": "Updated",
+    "details": "Details",
+    "vote": "Vote",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Are you sure you want to delete this decision?"
+  },
+  "newDecision": {
+    "saving": "Saving decision…",
+    "title": "New Decision",
+    "namePlaceholder": "Title",
+    "descriptionPlaceholder": "Description…",
+    "manual": "Manual",
+    "aiAssisted": "AI-assisted",
+    "private": "Private",
+    "public": "Public",
+    "options": "Options",
+    "addOption": "Add Option",
+    "criteria": "Criteria (Importance in %)",
+    "addCriterion": "Add Criterion",
+    "startGPT": "Start GPT Evaluation",
+    "evaluations": "Evaluations (1–10)",
+    "option": "Option",
+    "save": "Save Decision",
+    "fillAllFields": "Please fill out all fields.",
+    "gptFailed": "GPT evaluation failed.",
+    "noToken": "No token found",
+    "createError": "Error creating decision.",
+    "saveOptionsError": "Could not save options/criteria.",
+    "saveEvalError": "Could not save evaluations.",
+    "error": "Error:"
+  },
+  "newTeamDecision": {
+    "title": "New Team Decision",
+    "titlePlaceholder": "Title (required)",
+    "manual": "Manual",
+    "aiMode": "AI Mode",
+    "descriptionPlaceholder": "Description (optional)",
+    "note": "<1>Note:</1> Options, criteria, and deadline are optional. Ratings and weightings are only recorded after creation via <3>Edit</3> — also for the admin.",
+    "options": "Options",
+    "optionPlaceholder": "Option {{number}}",
+    "addOption": "Add Option",
+    "deleteOption": "Delete option",
+    "criteria": "Criteria",
+    "criterionPlaceholder": "Criterion",
+    "addCriterion": "Add Criterion",
+    "deleteCriterion": "Delete criterion",
+    "optional": "optional",
+    "saving": "Saving…",
+    "continue": "Continue to Invitations",
+    "errorNoTitle": "Please enter a title.",
+    "unknownError": "Unknown error",
+    "noIdError": "No valid decision ID received"
+  },
+  "teamInvite": {
+    "title": "Team Invitation",
+    "email": "Email Address",
+    "role": "Role",
+    "owner": "Owner",
+    "editor": "Editor",
+    "viewer": "Viewer",
+    "sendInvite": "Send Invitation",
+    "inviteSuccess": "Invitation sent.",
+    "inviteFailed": "Invitation failed",
+    "errorNoToken": "No valid token found",
+    "errorLoadingMembers": "Error loading team members",
+    "copyInviteLink": "Copy Invitation Link:",
+    "members": "Team Members",
+    "loading": "Loading…",
+    "unknown": "Unknown",
+    "activate": "Activate Decision",
+    "activateSuccess": "Decision has been activated.",
+    "activateFailed": "Activation failed",
+    "errorLoadingDetails": "Error loading decision details",
+    "errorNoDecision": "Missing decision data",
+    "errorNoName": "Name must not be empty."
+  },
+  "teamDecisionDetail": {
+    "loading": "⏳ Loading team decision …",
+    "notFound": "Decision not found.",
+    "missingOptionsOrCriteria": "Options or criteria have not been created yet.",
+    "missingHint": "As soon as at least one option and one criterion are added, the evaluation appears here.",
+    "retry": "Retry",
+    "deadline": "Deadline:",
+    "expired": "Expired",
+    "votingLocked": "(Voting locked)",
+    "noDeadline": "No deadline set.",
+    "changeDeadline": "Change deadline",
+    "teamStatus": "Team & Status",
+    "noTeamMembers": "No team members found.",
+    "anonymous": "Anonymous",
+    "role": "Role",
+    "voted": "Voted",
+    "pending": "Pending",
+    "option": "Option",
+    "teamResult": "Team Result",
+    "aiTableHint": "This decision has been automatically evaluated by AI. Justifications can be found in the cells. The team result is the weighted outcome of all AI evaluations.",
+    "manualTableHint": "The weighting (in parentheses) is the team average or the default weighting. Results are identical for all team members. Changes are only possible via the evaluation mask.",
+    "comments": "Comments",
+    "commentPlaceholder": "Comment here …",
+    "saveComment": "💾 Save",
+    "postComment": "➕ Post",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Really delete comment?"
+  },
+  "editTeamDecision": {
+    "loading": "⏳ Loading …",
+    "loadError": "Failed to load",
+    "saved": "Saved",
+    "saving": "Saving…",
+    "save": "Save",
+    "saveFailed": "Save failed",
+    "modeChanged": "Mode changed",
+    "deadlineSaved": "Deadline saved",
+    "aiError": "AI error",
+    "aiSuccess": "AI evaluation succeeded",
+    "aiRunning": "AI evaluation running…",
+    "startAi": "Start AI evaluation",
+    "aiLocked": "This decision has been completed by AI and is no longer editable.",
+    "title": "Edit Team Decision",
+    "settingsAria": "Decision data and settings",
+    "mode": "Mode",
+    "manual": "Manual",
+    "aiAuto": "AI (auto)",
+    "titleLabel": "Title",
+    "description": "Description",
+    "deadlineLabel": "Deadline (optional)",
+    "pickDateAria": "Pick date",
+    "clearDeadline": "Clear deadline",
+    "currentPrefix": "Current:",
+    "noDeadline": "No deadline set",
+    "deadlineExpired": "Deadline expired – editing disabled",
+    "optionsHeading": "Options",
+    "optionsNoDuplicates": "(no duplicates)",
+    "addOption": "+ Add Option",
+    "duplicateAria": "Duplicate",
+    "deleteOptionAria": "Delete option {{number}}",
+    "optionPlaceholder": "Option {{number}}",
+    "criteriaHeading": "Criteria",
+    "criteriaNoDuplicates": "(no duplicates, no weighting)",
+    "addCriterion": "+ Add Criterion",
+    "deleteCriterionAria": "Delete criterion {{number}}",
+    "criterionPlaceholder": "Criterion {{number}}",
+    "viewerTitle": "View Team Decision",
+    "viewerOptions": "Options",
+    "viewerCriteria": "Criteria"
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "intro": "Need clarity on how Decisia works? Here you’ll find answers to the most common questions about our app, features, and decision-making process.",
+    "items": {
+      "q1": {
+        "question": "What is Decisia?",
+        "answer": "Decisia is a decision-making app that helps you structure complex choices by defining your own options and criteria. You can score manually or use AI assistance (GPT) for automatic, transparent evaluation."
+      },
+      "q2": {
+        "question": "How does the AI scoring work?",
+        "answer": "In AI mode, GPT analyzes your decision context and criteria, then assigns scores and provides explanations for each option. This gives you an objective and structured overview."
+      },
+      "q3": {
+        "question": "Do I need an account to use Decisia?",
+        "answer": "Yes. You need a free account to create, save, and access your decisions."
+      },
+      "q4": {
+        "question": "Can I use Decisia for private and business decisions?",
+        "answer": "Absolutely. Decisia is flexible for both personal choices (e.g., job offers, purchases) and business decisions (e.g., vendor selection, hiring)."
+      },
+      "q5": {
+        "question": "Is my data safe?",
+        "answer": "Your decisions are stored securely. We use modern authentication and do not share your data with third parties. You can delete your data at any time."
+      }
+    }
+  },
+  "contact": {
+    "title": "Get in Touch",
+    "intro": "Whether it's a feature request, question, or partnership – send us a message and we’ll respond shortly.",
+    "success": {
+      "title": "Thank you! ✅",
+      "message": "Your message has been sent. We’ll get back to you soon."
+    },
+    "form": {
+      "firstname": {
+        "label": "First Name",
+        "placeholder": "e.g. Sarah"
+      },
+      "lastname": {
+        "label": "Last Name",
+        "placeholder": "e.g. Connor"
+      },
+      "email": {
+        "label": "Email Address",
+        "placeholder": "you@example.com"
+      },
+      "topic": {
+        "label": "Topic",
+        "placeholder": "e.g. Feature request, Feedback"
+      },
+      "message": {
+        "label": "Message",
+        "placeholder": "Write your message here..."
+      },
+      "attachment": {
+        "label": "Optional file upload"
+      },
+      "consent": {
+        "text": "I agree that my personal data will be processed for the purpose of responding to my inquiry.",
+        "link": "Read our Privacy Policy"
+      },
+      "submit": {
+        "sending": "Sending...",
+        "default": "Send Message"
+      }
+    }
+  },
+  "home": {
+    "hero": {
+      "title": "Make smarter decisions – with structure & AI.",
+      "text": "Decisia helps you make better choices by combining your personal priorities with AI-assisted analysis. Whether you’re choosing a job, comparing purchases, or solving complex questions — Decisia brings clarity to your decision-making process.",
+      "cta": "➕ Create your first decision"
+    },
+    "features": {
+      "structured": {
+        "title": "📋 Structured Thinking",
+        "text": "Define your own options and criteria, assign weights, and compare them side by side."
+      },
+      "ai": {
+        "title": "🤖 AI-Powered Insights",
+        "text": "Let GPT evaluate your choices based on your priorities — including clear, transparent explanations."
+      },
+      "weighted": {
+        "title": "📊 Weighted Scoring",
+        "text": "Scores are calculated automatically — fully transparent and exportable as PDF or CSV."
+      }
+    },
+    "cta": {
+      "title": "Ready to decide smarter?",
+      "button": "🚀 Start now — it’s free"
+    }
+  },
+  "editDecision": {
+    "loading": "loading...",
+    "loadFailed": "❌ Failed to load",
+    "saveFailed": "❌ Failed to save",
+    "updateSuccess": "✅ Decision updated",
+    "title": "Edit Decision",
+    "titlePlaceholder": "Title",
+    "descriptionPlaceholder": "Description",
+    "modeManual": "Manual",
+    "modeAI": "AI",
+    "typePrivate": "Private",
+    "typePublic": "Public",
+    "optionsHeading": "Options",
+    "criteriaHeading": "Criteria",
+    "evaluationsHeading": "Evaluations",
+    "optionColumn": "Option",
+    "saveButton": "Save"
+},
+"profile": {
+  "title": "Edit Profile",
+  "nickname": "Nickname",
+  "firstName": "First Name",
+  "lastName": "Last Name",
+  "birthday": "Birthday",
+  "save": "Save",
+  "saved": "✅ Profile saved."
+}
+,
+  "changePassword": {
+    "title": "Change Password",
+    "current": "Current password:",
+    "new": "New password:",
+    "save": "Save",
+    "forgot": "Forgot password?",
+    "success": "✅ Password changed successfully.",
+    "error": "❌ Error changing password.",
+    "serverError": "❌ Server error."
+  }
+}

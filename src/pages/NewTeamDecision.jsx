@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
+import { useTranslation, Trans } from 'react-i18next'
 
 // Helper functions for validation
 function hasDuplicates(array) {
@@ -22,6 +23,7 @@ function NewTeamDecision() {
 
   const navigate = useNavigate()
   const token = useAuthStore((s) => s.token)
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!token) navigate('/login')
@@ -31,16 +33,14 @@ function NewTeamDecision() {
     e.preventDefault()
     setError('')
 
-    // Only name is required!
     if (!decisionName) {
-      setError('Please enter a title.')
+      setError(t('newTeamDecision.errorNoTitle'))
       return
     }
 
     setLoading(true)
 
     try {
-      // Create team decision (base data, importance no longer exists!)
       const basePayload = {
         name: decisionName,
         description,
@@ -64,12 +64,11 @@ function NewTeamDecision() {
         body: JSON.stringify(basePayload)
       })
       const result = await res.json()
-      if (!res.ok) throw new Error(result.error || 'Unknown error')
+      if (!res.ok) throw new Error(result.error || t('newTeamDecision.unknownError'))
       const { decision } = result
-      if (!decision?.id) throw new Error('❌ No valid decision ID received')
+      if (!decision?.id) throw new Error(t('newTeamDecision.noIdError'))
       const decisionId = decision.id
 
-      // Continue to invitations
       navigate(`/team-invite/${decisionId}`)
     } catch (err) {
       setError(err.message)
@@ -91,19 +90,18 @@ function NewTeamDecision() {
   }
 
   return (
-    // HIER: Produkte keinen großen Wrapper mit Hintergrund, minimaler Container
     <div>
       <div className="max-w-4xl mx-auto p-8 space-y-10 shadow-2xl rounded-2xl bg-white dark:bg-neutral-800 text-gray-800 dark:text-gray-100">
-        <h1 className="text-3xl font-bold">New Team Decision</h1>
+        <h1 className="text-3xl font-bold">{t('newTeamDecision.title')}</h1>
         <div className="bg-blue-900/90 text-white rounded px-4 py-3 mb-6 text-sm">
-          <b>Note:</b> Options, criteria, and deadline are optional. Ratings and weightings are only recorded after creation via <b>"Edit"</b> — also for the admin.
+          <Trans i18nKey="newTeamDecision.note" components={{ 1: <b />, 3: <b /> }} />
         </div>
         <form onSubmit={handleSubmit} className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               value={decisionName}
               onChange={(e) => setDecisionName(e.target.value)}
-              placeholder="Title (required)"
+              placeholder={t('newTeamDecision.titlePlaceholder')}
               className="p-3 border rounded-lg"
             />
             <input
@@ -117,15 +115,15 @@ function NewTeamDecision() {
               onChange={(e) => setMode(e.target.value)}
               className="p-3 border rounded-lg"
             >
-              <option value="manual">Manual</option>
-              <option value="ai">AI Mode</option>
+              <option value="manual">{t('newTeamDecision.manual')}</option>
+              <option value="ai">{t('newTeamDecision.aiMode')}</option>
             </select>
           </div>
 
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Description (optional)"
+            placeholder={t('newTeamDecision.descriptionPlaceholder')}
             className="w-full p-3 border rounded-lg"
             rows={3}
           />
@@ -133,39 +131,43 @@ function NewTeamDecision() {
           {/* Options */}
           <div>
             <h2 className="text-lg font-semibold">
-              Options <span className="text-gray-400 text-base">(optional)</span>
+              {t('newTeamDecision.options')} <span className="text-gray-400 text-base">({t('newTeamDecision.optional')})</span>
             </h2>
             {options.map((opt, idx) => (
               <div key={idx} className="flex gap-2 mt-2">
                 <input
                   value={typeof opt === 'string' ? opt : opt.name || ''}
                   onChange={(e) => handleOptionChange(idx, e.target.value)}
-                  placeholder={`Option ${idx + 1}`}
+                  placeholder={t('newTeamDecision.optionPlaceholder', { number: idx + 1 })}
                   className="flex-1 p-2 border rounded"
                 />
-                <button type="button" onClick={() => setOptions(options.filter((_, i) => i !== idx))}>X</button>
+                <button type="button" aria-label={t('newTeamDecision.deleteOption')} onClick={() => setOptions(options.filter((_, i) => i !== idx))}>X</button>
               </div>
             ))}
-            <button type="button" onClick={() => setOptions([...options, ''])} className="mt-2 text-blue-600">+ Add Option</button>
+            <button type="button" onClick={() => setOptions([...options, ''])} className="mt-2 text-blue-600">
+              + {t('newTeamDecision.addOption')}
+            </button>
           </div>
 
           {/* Criteria */}
           <div>
             <h2 className="text-lg font-semibold">
-              Criteria <span className="text-gray-400 text-base">(optional)</span>
+              {t('newTeamDecision.criteria')} <span className="text-gray-400 text-base">({t('newTeamDecision.optional')})</span>
             </h2>
             {criteria.map((c, idx) => (
               <div key={idx} className="flex gap-2 mt-2">
                 <input
                   value={c}
                   onChange={(e) => handleCriterionChange(idx, e.target.value)}
-                  placeholder="Criterion"
+                  placeholder={t('newTeamDecision.criterionPlaceholder')}
                   className="flex-1 p-2 border rounded"
                 />
-                <button type="button" onClick={() => setCriteria(criteria.filter((_, i) => i !== idx))}>X</button>
+                <button type="button" aria-label={t('newTeamDecision.deleteCriterion')} onClick={() => setCriteria(criteria.filter((_, i) => i !== idx))}>X</button>
               </div>
             ))}
-            <button type="button" onClick={() => setCriteria([...criteria, ''])} className="mt-2 text-blue-600">+ Add Criterion</button>
+            <button type="button" onClick={() => setCriteria([...criteria, ''])} className="mt-2 text-blue-600">
+              + {t('newTeamDecision.addCriterion')}
+            </button>
           </div>
 
           {error && (
@@ -176,7 +178,7 @@ function NewTeamDecision() {
 
           <div className="text-right">
             <button type="submit" disabled={loading} className="bg-blue-600 text-white px-6 py-2 rounded-lg shadow font-semibold">
-              {loading ? 'Saving…' : 'Continue to Invitations'}
+              {loading ? t('newTeamDecision.saving') : t('newTeamDecision.continue')}
             </button>
           </div>
         </form>

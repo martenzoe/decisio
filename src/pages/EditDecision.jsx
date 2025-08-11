@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { updateDecision } from '../api/decision';
 import { useAuthStore } from '../store/useAuthStore';
-
+import { useTranslation } from 'react-i18next';
 
 function EditDecision() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const token = useAuthStore.getState().token;
@@ -26,7 +27,10 @@ function EditDecision() {
         }
       });
       const data = await res.json();
-      if (!res.ok) return alert('❌ Fehler beim Laden');
+      if (!res.ok) {
+        alert(t('editDecision.loadFailed'));
+        return;
+      }
 
       setName(data.decision.name);
       setDescription(data.decision.description);
@@ -48,7 +52,7 @@ function EditDecision() {
     };
 
     fetchDecision();
-  }, [id, token]);
+  }, [id, token, t]);
 
   const handleEvaluationChange = (option_id, criterion_id, field, value) => {
     setEvaluations(prev => ({
@@ -98,48 +102,48 @@ function EditDecision() {
         evaluations: formattedEvaluations
       });
 
-      alert('✅ Entscheidung aktualisiert');
+      alert(t('editDecision.updateSuccess'));
       navigate(`/decision/${id}`);
     } catch (err) {
       console.error(err);
-      alert('❌ Fehler beim Speichern');
+      alert(t('editDecision.saveFailed'));
     }
   };
 
-  if (loading) return <div className="p-8">⏳ loading...</div>;
+  if (loading) return <div className="p-8">⏳ {t('editDecision.loading')}</div>;
 
   return (
     <div className="max-w-4xl mx-auto p-8">
-      <h2 className="text-2xl font-bold mb-4">✏️ Edit Decision</h2>
+      <h2 className="text-2xl font-bold mb-4">✏️ {t('editDecision.title')}</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <input
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
           className="w-full p-2 border rounded"
-          placeholder="Titel"
+          placeholder={t('editDecision.titlePlaceholder')}
         />
         <textarea
           value={description}
           onChange={e => setDescription(e.target.value)}
           className="w-full p-2 border rounded"
           rows="3"
-          placeholder="Beschreibung"
+          placeholder={t('editDecision.descriptionPlaceholder')}
         />
 
         <div className="grid grid-cols-2 gap-4">
           <select value={mode} onChange={e => setMode(e.target.value)} className="p-2 border rounded">
-            <option value="manual">Manual</option>
-            <option value="ai">AI</option>
+            <option value="manual">{t('editDecision.modeManual')}</option>
+            <option value="ai">{t('editDecision.modeAI')}</option>
           </select>
           <select value={type} onChange={e => setType(e.target.value)} className="p-2 border rounded">
-            <option value="private">Private</option>
-            <option value="public">Public</option>
+            <option value="private">{t('editDecision.typePrivate')}</option>
+            <option value="public">{t('editDecision.typePublic')}</option>
           </select>
         </div>
 
         <div>
-          <h3 className="font-semibold">⚙️ Options</h3>
+          <h3 className="font-semibold">⚙️ {t('editDecision.optionsHeading')}</h3>
           {options.map((opt, i) => (
             <input
               key={opt.id}
@@ -156,7 +160,7 @@ function EditDecision() {
         </div>
 
         <div>
-          <h3 className="font-semibold">📊 Criteria</h3>
+          <h3 className="font-semibold">📊 {t('editDecision.criteriaHeading')}</h3>
           {criteria.map((crit, i) => (
             <div key={crit.id} className="flex gap-2 mb-2">
               <input
@@ -184,11 +188,11 @@ function EditDecision() {
         </div>
 
         <div>
-          <h3 className="font-semibold mb-2">🔢 Evaluations</h3>
+          <h3 className="font-semibold mb-2">🔢 {t('editDecision.evaluationsHeading')}</h3>
           <table className="min-w-full border">
             <thead>
               <tr>
-                <th className="border p-2 text-left">Option</th>
+                <th className="border p-2 text-left">{t('editDecision.optionColumn')}</th>
                 {criteria.map(c => (
                   <th key={c.id} className="border p-2 text-left">{c.name}</th>
                 ))}
@@ -217,7 +221,7 @@ function EditDecision() {
         </div>
 
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
-          💾 Save
+          💾 {t('editDecision.saveButton')}
         </button>
       </form>
     </div>

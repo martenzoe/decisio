@@ -1,0 +1,315 @@
+{
+  "navbar": {
+    "home": "Start",
+    "dashboard": "Übersicht",
+    "faq": "FAQ",
+    "contact": "Kontakt",
+    "switchLang": "Sprache wechseln",
+    "dark": "Dunkel",
+    "light": "Hell",
+    "notifications": "Benachrichtigungen",
+    "seeAllNotifications": "Alle Benachrichtigungen anzeigen",
+    "noNotifications": "Keine Benachrichtigungen",
+    "accept": "Annehmen",
+    "profileMenu": "Profilmenü",
+    "editProfile": "Profil bearbeiten",
+    "changePassword": "Passwort ändern",
+    "logout": "Abmelden"
+  },
+  "dashboard": {
+    "yourDecisions": "Deine Entscheidungen",
+    "createdCount": "Du hast <strong>{{count}}</strong> Entscheidungen erstellt.",
+    "newDecision": "Neue Entscheidung",
+    "newTeamDecision": "Neue Team-Entscheidung",
+    "searchPlaceholder": "🔍 Nach Titel suchen...",
+    "filterNewest": "Neueste",
+    "filterSolo": "Einzel",
+    "filterTeam": "Team",
+    "filterManual": "Manuell",
+    "filterAI": "KI",
+    "loading": "Lade Entscheidungen…",
+    "noDecisions": "Keine Entscheidungen gefunden.",
+    "team": "TEAM",
+    "solo": "EINZEL",
+    "mode": "Modus",
+    "manual": "🧠 Manuell",
+    "ai": "🤖 KI",
+    "score": "Ergebnis",
+    "created": "Erstellt",
+    "updated": "Aktualisiert",
+    "details": "Details",
+    "vote": "Abstimmen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "confirmDelete": "Willst du diese Entscheidung wirklich löschen?"
+  },
+  "newDecision": {
+    "saving": "Entscheidung wird gespeichert…",
+    "title": "Neue Entscheidung",
+    "namePlaceholder": "Titel",
+    "descriptionPlaceholder": "Beschreibung…",
+    "manual": "Manuell",
+    "aiAssisted": "KI-gestützt",
+    "private": "Privat",
+    "public": "Öffentlich",
+    "options": "Optionen",
+    "addOption": "Option hinzufügen",
+    "criteria": "Kriterien (Wichtigkeit in %)",
+    "addCriterion": "Kriterium hinzufügen",
+    "startGPT": "GPT-Auswertung starten",
+    "evaluations": "Bewertungen (1–10)",
+    "option": "Option",
+    "save": "Entscheidung speichern",
+    "fillAllFields": "Bitte alle Felder ausfüllen.",
+    "gptFailed": "GPT-Auswertung fehlgeschlagen.",
+    "noToken": "Kein Token gefunden",
+    "createError": "Fehler beim Erstellen der Entscheidung.",
+    "saveOptionsError": "Optionen/Kriterien konnten nicht gespeichert werden.",
+    "saveEvalError": "Bewertungen konnten nicht gespeichert werden.",
+    "error": "Fehler:"
+  },
+  "newTeamDecision": {
+    "title": "Neue Team-Entscheidung",
+    "titlePlaceholder": "Titel (erforderlich)",
+    "manual": "Manuell",
+    "aiMode": "KI-Modus",
+    "descriptionPlaceholder": "Beschreibung (optional)",
+    "note": "<1>Hinweis:</1> Optionen, Kriterien und Frist sind optional. Bewertungen und Gewichtungen werden erst nach dem Anlegen über <3>Bearbeiten</3> erfasst – auch für den Admin.",
+    "options": "Optionen",
+    "optionPlaceholder": "Option {{number}}",
+    "addOption": "Option hinzufügen",
+    "deleteOption": "Option löschen",
+    "criteria": "Kriterien",
+    "criterionPlaceholder": "Kriterium",
+    "addCriterion": "Kriterium hinzufügen",
+    "deleteCriterion": "Kriterium löschen",
+    "optional": "optional",
+    "saving": "Speichern…",
+    "continue": "Weiter zur Einladung",
+    "errorNoTitle": "Bitte einen Titel eingeben.",
+    "unknownError": "Unbekannter Fehler",
+    "noIdError": "Keine gültige Entscheidungs-ID erhalten"
+  },
+  "teamInvite": {
+    "title": "Team-Einladung",
+    "email": "E-Mail-Adresse",
+    "role": "Rolle",
+    "owner": "Inhaber",
+    "editor": "Bearbeiter",
+    "viewer": "Beobachter",
+    "sendInvite": "Einladung senden",
+    "inviteSuccess": "Einladung versendet.",
+    "inviteFailed": "Einladung fehlgeschlagen",
+    "errorNoToken": "Kein gültiges Token gefunden",
+    "errorLoadingMembers": "Fehler beim Laden der Teammitglieder",
+    "copyInviteLink": "Einladungslink kopieren:",
+    "members": "Teammitglieder",
+    "loading": "Lädt…",
+    "unknown": "Unbekannt",
+    "activate": "Entscheidung aktivieren",
+    "activateSuccess": "Entscheidung wurde aktiviert.",
+    "activateFailed": "Aktivierung fehlgeschlagen",
+    "errorLoadingDetails": "Fehler beim Laden der Entscheidungsdetails",
+    "errorNoDecision": "Entscheidungsdaten fehlen",
+    "errorNoName": "Name darf nicht leer sein."
+  },
+  "teamDecisionDetail": {
+    "loading": "⏳ Team-Entscheidung wird geladen …",
+    "notFound": "Entscheidung nicht gefunden.",
+    "missingOptionsOrCriteria": "Optionen oder Kriterien wurden noch nicht angelegt.",
+    "missingHint": "Sobald mindestens eine Option und ein Kriterium angelegt sind, erscheint hier die Auswertung.",
+    "retry": "Erneut versuchen",
+    "deadline": "Deadline:",
+    "expired": "Abgelaufen",
+    "votingLocked": "(Voting gesperrt)",
+    "noDeadline": "Keine Deadline gesetzt.",
+    "changeDeadline": "Deadline ändern",
+    "teamStatus": "Team & Status",
+    "noTeamMembers": "Keine Teammitglieder gefunden.",
+    "anonymous": "Anonym",
+    "role": "Rolle",
+    "voted": "Abgestimmt",
+    "pending": "Ausstehend",
+    "option": "Option",
+    "teamResult": "Team-Ergebnis",
+    "aiTableHint": "Diese Entscheidung wurde automatisch per KI bewertet. Begründungen stehen in den Zellen. Das Team-Ergebnis ist das gewichtete Resultat aller KI-Bewertungen.",
+    "manualTableHint": "Die Gewichtung (in Klammern) ist der Teamdurchschnitt oder die Standardgewichtung. Ergebnisse sind für alle Teammitglieder identisch. Änderungen nur über die Bewertungsmaske möglich.",
+    "comments": "Kommentare",
+    "commentPlaceholder": "Kommentiere hier …",
+    "saveComment": "💾 Speichern",
+    "postComment": "➕ Posten",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "deleteConfirm": "Kommentar wirklich löschen?"
+  },
+  "editTeamDecision": {
+    "loading": "⏳ Lädt …",
+    "loadError": "Fehler beim Laden",
+    "saved": "Gespeichert",
+    "saving": "Speichert…",
+    "save": "Speichern",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "modeChanged": "Modus geändert",
+    "deadlineSaved": "Deadline gespeichert",
+    "aiError": "Fehler bei KI",
+    "aiSuccess": "KI-Auswertung erfolgreich",
+    "aiRunning": "KI-Auswertung läuft…",
+    "startAi": "KI-Auswertung starten",
+    "aiLocked": "Diese Entscheidung wurde per KI abgeschlossen und kann nicht mehr bearbeitet werden.",
+    "title": "Team-Entscheidung bearbeiten",
+    "settingsAria": "Entscheidungsdaten und Einstellungen",
+    "mode": "Modus",
+    "manual": "Manuell",
+    "aiAuto": "KI (automatisch)",
+    "titleLabel": "Titel",
+    "description": "Beschreibung",
+    "deadlineLabel": "Deadline (optional)",
+    "pickDateAria": "Datum auswählen",
+    "clearDeadline": "Deadline entfernen",
+    "currentPrefix": "Aktuell:",
+    "noDeadline": "Keine Deadline gesetzt",
+    "deadlineExpired": "Deadline abgelaufen – Bearbeitung deaktiviert",
+    "optionsHeading": "Optionen",
+    "optionsNoDuplicates": "(keine Duplikate)",
+    "addOption": "+ Option hinzufügen",
+    "duplicateAria": "Duplikat",
+    "deleteOptionAria": "Option {{number}} löschen",
+    "optionPlaceholder": "Option {{number}}",
+    "criteriaHeading": "Kriterien",
+    "criteriaNoDuplicates": "(keine Duplikate, keine Gewichtung)",
+    "addCriterion": "+ Kriterium hinzufügen",
+    "deleteCriterionAria": "Kriterium {{number}} löschen",
+    "criterionPlaceholder": "Kriterium {{number}}",
+    "viewerTitle": "Teamentscheidung ansehen",
+    "viewerOptions": "Optionen",
+    "viewerCriteria": "Kriterien"
+  },
+  "faq": {
+    "title": "Häufige Fragen (FAQ)",
+    "intro": "Du brauchst Klarheit, wie Decisia funktioniert? Hier findest du Antworten auf die häufigsten Fragen zu unserer App, den Funktionen und dem Entscheidungsprozess.",
+    "items": {
+      "q1": {
+        "question": "Was ist Decisia?",
+        "answer": "Decisia ist eine Entscheidungs-App, mit der du komplexe Entscheidungen strukturierst, indem du eigene Optionen und Kriterien definierst. Du kannst manuell bewerten oder die KI-Unterstützung (GPT) für eine automatische, transparente Auswertung nutzen."
+      },
+      "q2": {
+        "question": "Wie funktioniert die KI-Bewertung?",
+        "answer": "Im KI-Modus analysiert GPT deinen Entscheidungskontext und die Kriterien, vergibt darauf basierend Bewertungen und liefert Begründungen je Option. So bekommst du einen objektiven, strukturierten Überblick."
+      },
+      "q3": {
+        "question": "Brauche ich ein Konto, um Decisia zu nutzen?",
+        "answer": "Ja. Du brauchst ein kostenloses Konto, um Entscheidungen zu erstellen, zu speichern und später wieder darauf zuzugreifen."
+      },
+      "q4": {
+        "question": "Kann ich Decisia privat und geschäftlich nutzen?",
+        "answer": "Absolut. Decisia eignet sich sowohl für private Entscheidungen (z. B. Jobangebote, Anschaffungen) als auch für Business-Themen (z. B. Anbieterauswahl, Hiring)."
+      },
+      "q5": {
+        "question": "Sind meine Daten sicher?",
+        "answer": "Deine Entscheidungen werden sicher gespeichert. Wir setzen moderne Authentifizierung ein und teilen deine Daten nicht mit Dritten. Du kannst deine Daten jederzeit löschen."
+      }
+    }
+  },
+  "contact": {
+    "title": "Kontakt aufnehmen",
+    "intro": "Ob Feature-Wunsch, Frage oder Partnerschaft – schick uns eine Nachricht und wir melden uns schnellstmöglich zurück.",
+    "success": {
+      "title": "Danke! ✅",
+      "message": "Deine Nachricht wurde gesendet. Wir melden uns bald bei dir."
+    },
+    "form": {
+      "firstname": {
+        "label": "Vorname",
+        "placeholder": "z. B. Sarah"
+      },
+      "lastname": {
+        "label": "Nachname",
+        "placeholder": "z. B. Müller"
+      },
+      "email": {
+        "label": "E-Mail-Adresse",
+        "placeholder": "du@example.com"
+      },
+      "topic": {
+        "label": "Betreff",
+        "placeholder": "z. B. Feature-Wunsch, Feedback"
+      },
+      "message": {
+        "label": "Nachricht",
+        "placeholder": "Schreibe deine Nachricht hier..."
+      },
+      "attachment": {
+        "label": "Optionale Datei hochladen"
+      },
+      "consent": {
+        "text": "Ich stimme zu, dass meine personenbezogenen Daten zum Zweck der Beantwortung meiner Anfrage verarbeitet werden.",
+        "link": "Datenschutzerklärung lesen"
+      },
+      "submit": {
+        "sending": "Senden...",
+        "default": "Nachricht senden"
+      }
+    }
+  },
+  "home": {
+    "hero": {
+      "title": "Triff smartere Entscheidungen – strukturiert & mit KI.",
+      "text": "Decisia hilft dir, bessere Entscheidungen zu treffen, indem deine persönlichen Prioritäten mit KI-gestützter Analyse kombiniert werden. Ob Jobwahl, Kaufvergleich oder komplexe Fragestellungen – Decisia bringt Klarheit in deinen Entscheidungsprozess.",
+      "cta": "➕ Erste Entscheidung erstellen"
+    },
+    "features": {
+      "structured": {
+        "title": "📋 Strukturiertes Denken",
+        "text": "Definiere eigene Optionen und Kriterien, vergebe Gewichtungen und vergleiche alles übersichtlich."
+      },
+      "ai": {
+        "title": "🤖 KI-gestützte Insights",
+        "text": "Lass GPT deine Optionen basierend auf deinen Prioritäten bewerten – mit klaren, transparenten Begründungen."
+      },
+      "weighted": {
+        "title": "📊 Gewichtete Scores",
+        "text": "Ergebnisse werden automatisch berechnet – vollständig transparent und als PDF oder CSV exportierbar."
+      }
+    },
+    "cta": {
+      "title": "Bereit, smarter zu entscheiden?",
+      "button": "🚀 Jetzt starten – kostenlos"
+    }
+  },
+  "editDecision": {
+    "loading": "lädt...",
+    "loadFailed": "❌ Fehler beim Laden",
+    "saveFailed": "❌ Fehler beim Speichern",
+    "updateSuccess": "✅ Entscheidung aktualisiert",
+    "title": "Entscheidung bearbeiten",
+    "titlePlaceholder": "Titel",
+    "descriptionPlaceholder": "Beschreibung",
+    "modeManual": "Manuell",
+    "modeAI": "KI",
+    "typePrivate": "Privat",
+    "typePublic": "Öffentlich",
+    "optionsHeading": "Optionen",
+    "criteriaHeading": "Kriterien",
+    "evaluationsHeading": "Bewertungen",
+    "optionColumn": "Option",
+    "saveButton": "Speichern"
+  },
+"profile": {
+  "title": "Profil bearbeiten",
+  "nickname": "Spitzname",
+  "firstName": "Vorname",
+  "lastName": "Nachname",
+  "birthday": "Geburtstag",
+  "save": "Speichern",
+  "saved": "✅ Profil gespeichert."
+},
+"changePassword": {
+  "title": "Passwort ändern",
+  "current": "Aktuelles Passwort:",
+  "new": "Neues Passwort:",
+  "save": "Speichern",
+  "forgot": "Passwort vergessen?",
+  "success": "✅ Passwort erfolgreich geändert.",
+  "error": "❌ Fehler beim Ändern des Passworts.",
+  "serverError": "❌ Serverfehler."
+}}

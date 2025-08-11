@@ -1,14 +1,16 @@
 import React from 'react'
 import { useForm, ValidationError } from '@formspree/react'
+import { useTranslation } from 'react-i18next'
 
 function Kontakt() {
+  const { t } = useTranslation()
   const [state, handleSubmit] = useForm('xgvkbaqa')
 
   if (state.succeeded) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
-        <h1 className="text-3xl font-bold text-green-600">Thank you! ✅</h1>
-        <p className="text-white dark:text-gray-300">Your message has been sent. We’ll get back to you soon.</p>
+        <h1 className="text-3xl font-bold text-green-600">{t('contact.success.title')}</h1>
+        <p className="text-white dark:text-gray-300">{t('contact.success.message')}</p>
       </div>
     )
   }
@@ -17,10 +19,8 @@ function Kontakt() {
     <div className="max-w-2xl mx-auto px-4 py-16 space-y-10">
       {/* Intro */}
       <section className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-white dark:text-white">Get in Touch</h1>
-        <p className="text-white dark:text-gray-300 max-w-xl mx-auto">
-          Whether it's a feature request, question, or partnership – send us a message and we’ll respond shortly.
-        </p>
+        <h1 className="text-4xl font-bold text-white dark:text-white">{t('contact.title')}</h1>
+        <p className="text-white dark:text-gray-300 max-w-xl mx-auto">{t('contact.intro')}</p>
       </section>
 
       {/* Contact Form */}
@@ -33,26 +33,26 @@ function Kontakt() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <label htmlFor="firstname" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-              First Name
+              {t('contact.form.firstname.label')}
             </label>
             <input
               id="firstname"
               type="text"
               name="firstname"
-              placeholder="e.g. Sarah"
+              placeholder={t('contact.form.firstname.placeholder')}
               required
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex-1">
             <label htmlFor="lastname" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-              Last Name
+              {t('contact.form.lastname.label')}
             </label>
             <input
               id="lastname"
               type="text"
               name="lastname"
-              placeholder="e.g. Connor"
+              placeholder={t('contact.form.lastname.placeholder')}
               required
               className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
             />
@@ -62,13 +62,13 @@ function Kontakt() {
         {/* Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-            Email Address
+            {t('contact.form.email.label')}
           </label>
           <input
             id="email"
             type="email"
             name="email"
-            placeholder="you@example.com"
+            placeholder={t('contact.form.email.placeholder')}
             required
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
           />
@@ -78,13 +78,13 @@ function Kontakt() {
         {/* Topic */}
         <div>
           <label htmlFor="topic" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-            Topic
+            {t('contact.form.topic.label')}
           </label>
           <input
             id="topic"
             type="text"
             name="topic"
-            placeholder="e.g. Feature request, Feedback"
+            placeholder={t('contact.form.topic.placeholder')}
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
           />
         </div>
@@ -92,12 +92,12 @@ function Kontakt() {
         {/* Message */}
         <div>
           <label htmlFor="message" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-            Message
+            {t('contact.form.message.label')}
           </label>
           <textarea
             id="message"
             name="message"
-            placeholder="Write your message here..."
+            placeholder={t('contact.form.message.placeholder')}
             rows="5"
             required
             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white"
@@ -108,7 +108,7 @@ function Kontakt() {
         {/* File Upload */}
         <div>
           <label htmlFor="attachment" className="block text-sm font-medium text-gray-800 dark:text-gray-200 mb-1">
-            Optional file upload
+            {t('contact.form.attachment.label')}
           </label>
           <input
             id="attachment"
@@ -128,8 +128,8 @@ function Kontakt() {
             className="mt-1"
           />
           <label htmlFor="consent" className="text-sm text-gray-700 dark:text-gray-300">
-            I agree that my personal data will be processed for the purpose of responding to my inquiry. Read our{' '}
-            <a href="/privacy" className="underline text-[#4F46E5] dark:text-blue-400">Privacy Policy</a>.
+            {t('contact.form.consent.text')}{' '}
+            <a href="/privacy" className="underline text-[#4F46E5] dark:text-blue-400">{t('contact.form.consent.link')}</a>.
           </label>
         </div>
 
@@ -139,7 +139,7 @@ function Kontakt() {
           disabled={state.submitting}
           className="bg-[#4F46E5] text-white font-medium px-6 py-2 rounded-lg hover:bg-[#4338CA] transition disabled:opacity-50"
         >
-          {state.submitting ? 'Sending...' : 'Send Message'}
+          {state.submitting ? t('contact.form.submit.sending') : t('contact.form.submit.default')}
         </button>
       </form>
     </div>

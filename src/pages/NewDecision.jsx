@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getGPTRecommendation } from '../ai/decisionAdvisor'
 import { useAuthStore } from '../store/useAuthStore'
+import { useTranslation, Trans } from 'react-i18next'
 
 function NewDecision() {
   const [decisionName, setDecisionName] = useState('')
@@ -16,6 +17,7 @@ function NewDecision() {
 
   const token = useAuthStore(s => s.token)
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const updateEvaluations = (opts, crits) => {
     const evals = {}
@@ -31,7 +33,7 @@ function NewDecision() {
 
   const handleGPTRecommendation = async () => {
     if (!decisionName || !description || options.some(o => !o) || criteria.some(c => !c.name || !c.importance)) {
-      return alert('⚠️ Please fill out all fields.')
+      return alert(t('newDecision.fillAllFields'))
     }
 
     setLoading(true)
@@ -59,7 +61,7 @@ function NewDecision() {
       setGptFinished(true)
     } catch (err) {
       console.error('❌ GPT Error:', err.message)
-      alert('❌ GPT evaluation failed.')
+      alert(t('newDecision.gptFailed'))
     } finally {
       setLoading(false)
     }
@@ -67,9 +69,9 @@ function NewDecision() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!token) return alert('⛔ No token found')
+    if (!token) return alert(t('newDecision.noToken'))
     if (!decisionName || options.some(o => !o) || criteria.some(c => !c.name || !c.importance)) {
-      return alert('⚠️ Please fill out all fields.')
+      return alert(t('newDecision.fillAllFields'))
     }
 
     setLoading(true)
@@ -85,7 +87,7 @@ function NewDecision() {
       })
 
       const created = await res.json()
-      if (!res.ok) throw new Error(created.error || 'Error creating decision')
+      if (!res.ok) throw new Error(created.error || t('newDecision.createError'))
       const decisionId = created.id
 
       // For private decisions: save options, criteria & evaluations
@@ -109,7 +111,7 @@ function NewDecision() {
             }))
           })
         })
-        if (!detailsRes.ok) throw new Error('Could not save options/criteria.')
+        if (!detailsRes.ok) throw new Error(t('newDecision.saveOptionsError'))
 
         // 3. Fetch option and criteria IDs
         const details = await fetch(`/api/decision/${decisionId}/details`, {
@@ -148,14 +150,14 @@ function NewDecision() {
             },
             body: JSON.stringify({ evaluations: evalArray })
           })
-          if (!evalRes.ok) throw new Error('Could not save evaluations.')
+          if (!evalRes.ok) throw new Error(t('newDecision.saveEvalError'))
         }
       }
 
       navigate(`/decision/${decisionId}`)
     } catch (err) {
       console.error('❌ Save error:', err.message)
-      alert(`❌ Error: ${err.message}`)
+      alert(`${t('newDecision.error')} ${err.message}`)
     } finally {
       setLoading(false)
     }
@@ -166,25 +168,25 @@ function NewDecision() {
       {loading && (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-white dark:bg-gray-800 px-6 py-4 rounded shadow text-gray-900 dark:text-white">
-            ⏳ Saving decision…
+            ⏳ {t('newDecision.saving')}
           </div>
         </div>
       )}
 
       <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow space-y-6">
-        <h2 className="text-2xl font-bold">➕ New Decision</h2>
+        <h2 className="text-2xl font-bold">➕ {t('newDecision.title')}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <input
             type="text"
-            placeholder="Title"
+            placeholder={t('newDecision.namePlaceholder')}
             value={decisionName}
             onChange={e => setDecisionName(e.target.value)}
             className="w-full border px-4 py-2 rounded"
             required
           />
           <textarea
-            placeholder="Description…"
+            placeholder={t('newDecision.descriptionPlaceholder')}
             value={description}
             onChange={e => setDescription(e.target.value)}
             className="w-full border px-4 py-2 rounded"
@@ -197,21 +199,21 @@ function NewDecision() {
               onChange={e => setMode(e.target.value)}
               className="border px-4 py-2 rounded"
             >
-              <option value="manual">Manual</option>
-              <option value="ai">AI-assisted</option>
+              <option value="manual">{t('newDecision.manual')}</option>
+              <option value="ai">{t('newDecision.aiAssisted')}</option>
             </select>
             <select
               value={type}
               onChange={e => setType(e.target.value)}
               className="border px-4 py-2 rounded"
             >
-              <option value="private">Private</option>
-              <option value="public">Public</option>
+              <option value="private">{t('newDecision.private')}</option>
+              <option value="public">{t('newDecision.public')}</option>
             </select>
           </div>
 
           <div>
-            <label className="font-semibold">Options</label>
+            <label className="font-semibold">{t('newDecision.options')}</label>
             {options.map((o, i) => (
               <input
                 key={i}
@@ -234,12 +236,12 @@ function NewDecision() {
               }}
               className="text-blue-600 text-sm hover:underline"
             >
-              ➕ Add Option
+              ➕ {t('newDecision.addOption')}
             </button>
           </div>
 
           <div>
-            <label className="font-semibold">Criteria (Importance in %)</label>
+            <label className="font-semibold">{t('newDecision.criteria')}</label>
             {criteria.map((c, i) => (
               <div key={i} className="flex gap-2 mb-2">
                 <input
@@ -274,7 +276,7 @@ function NewDecision() {
               }}
               className="text-blue-600 text-sm hover:underline"
             >
-              ➕ Add Criterion
+              ➕ {t('newDecision.addCriterion')}
             </button>
           </div>
 
@@ -284,17 +286,17 @@ function NewDecision() {
               onClick={handleGPTRecommendation}
               className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
             >
-              🤖 Start GPT Evaluation
+              🤖 {t('newDecision.startGPT')}
             </button>
           )}
 
           {(mode === 'manual' || gptFinished) && (
             <>
-              <label className="font-semibold">Evaluations (1–10)</label>
+              <label className="font-semibold">{t('newDecision.evaluations')}</label>
               <table className="min-w-full text-sm border mt-2">
                 <thead>
                   <tr>
-                    <th className="border px-2 py-1 text-left">Option</th>
+                    <th className="border px-2 py-1 text-left">{t('newDecision.option')}</th>
                     {criteria.map((c, j) => (
                       <th key={j} className="border px-2 py-1 text-left">
                         {c.name}
@@ -337,7 +339,7 @@ function NewDecision() {
             type="submit"
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
-            💾 Save Decision
+            💾 {t('newDecision.save')}
           </button>
         </form>
       </div>

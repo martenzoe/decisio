@@ -3,8 +3,14 @@ import { useEffect, useState } from 'react'
 import AvatarUploader from '../components/AvatarUploader'
 import { useAuthStore } from '../store/useAuthStore'
 import { fetchProfile, saveProfile } from '../api/profile'
+import { useTranslation } from 'react-i18next'
 
 function Profile() {
+  // profile-Scoped Übersetzungen
+  const { t } = useTranslation('translation', { keyPrefix: 'profile' })
+  // globales t für Keys außerhalb von "profile"
+  const { t: tGlobal } = useTranslation()
+
   const { setUser } = useAuthStore()
   const [form, setForm] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -13,13 +19,11 @@ function Profile() {
     const loadProfile = async () => {
       try {
         const data = await fetchProfile()
-        console.log('👤 Profil geladen:', data)
         setForm(data)
       } catch (err) {
         console.error('❌ Fehler beim Laden des Profils:', err.message)
       }
     }
-
     loadProfile()
   }, [])
 
@@ -34,7 +38,7 @@ function Profile() {
       await saveProfile(form)
       const fresh = await fetchProfile()
       setUser(fresh)
-      console.log('✅ Profil gespeichert')
+      alert(t('saved'))
     } catch (err) {
       console.error('❌ Fehler beim Speichern:', err.message)
     } finally {
@@ -43,13 +47,20 @@ function Profile() {
   }
 
   if (!form) {
-    return <div className="text-center text-white mt-10">Loading profile …</div>
+    return (
+      <div className="text-center text-white mt-10">
+        {tGlobal('editDecision.loading')}
+      </div>
+    )
   }
 
   return (
     <div className="flex justify-center mt-16">
       <div className="bg-gray-800 p-8 rounded-xl shadow-md w-full max-w-md text-white">
-        <h2 className="text-2xl font-bold mb-6 text-center">Edit Profile</h2>
+        <h2 className="text-2xl font-bold mb-6 text-center">
+          {t('title')}
+        </h2>
+
         <div className="flex justify-center mb-4">
           <AvatarUploader
             avatarUrl={form.avatar_url}
@@ -57,7 +68,7 @@ function Profile() {
           />
         </div>
 
-        <label className="text-sm mb-1 block">Nickname</label>
+        <label className="text-sm mb-1 block">{t('nickname')}</label>
         <input
           type="text"
           name="nickname"
@@ -70,7 +81,7 @@ function Profile() {
           {(form.nickname || '').length}/20
         </p>
 
-        <label className="text-sm mb-1 block">First Name</label>
+        <label className="text-sm mb-1 block">{t('firstName')}</label>
         <input
           type="text"
           name="first_name"
@@ -79,7 +90,7 @@ function Profile() {
           className="w-full mb-4 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
         />
 
-        <label className="text-sm mb-1 block">Last Name</label>
+        <label className="text-sm mb-1 block">{t('lastName')}</label>
         <input
           type="text"
           name="last_name"
@@ -88,7 +99,7 @@ function Profile() {
           className="w-full mb-4 px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
         />
 
-        <label className="text-sm mb-1 block">Birthday</label>
+        <label className="text-sm mb-1 block">{t('birthday')}</label>
         <input
           type="date"
           name="birthday"
@@ -100,9 +111,9 @@ function Profile() {
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded disabled:opacity-60"
         >
-          {loading ? 'Saving...' : 'Save'}
+          {loading ? tGlobal('newTeamDecision.saving') : t('save')}
         </button>
       </div>
     </div>

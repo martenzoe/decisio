@@ -2,11 +2,13 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { updateDecision } from '../api/decision'
 import { useAuthStore } from '../store/useAuthStore'
+import { useTranslation } from 'react-i18next'
 
 function TeamInvite() {
   const { id } = useParams()
   const navigate = useNavigate()
   const token = useAuthStore((s) => s.token)
+  const { t } = useTranslation()
 
   const [teamMembers, setTeamMembers] = useState([])
   const [email, setEmail] = useState('')
@@ -25,12 +27,12 @@ function TeamInvite() {
   const fetchTeamMembers = async () => {
     setLoading(true)
     try {
-      if (!token) throw new Error('No valid token found')
+      if (!token) throw new Error(t('teamInvite.errorNoToken'))
       const res = await fetch(`/api/team/team-members/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Error loading team members')
+      if (!res.ok) throw new Error(data.error || t('teamInvite.errorLoadingMembers'))
       setTeamMembers(data)
     } catch (err) {
       setError(err.message)
@@ -48,10 +50,10 @@ function TeamInvite() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to load details')
+      if (!res.ok) throw new Error(data.error || t('teamInvite.errorLoadingDetails'))
       setDecisionDetails(data)
     } catch (err) {
-      setActivateError('Error loading decision details: ' + err.message)
+      setActivateError(t('teamInvite.errorLoadingDetails') + ': ' + err.message)
     } finally {
       setDetailsLoading(false)
     }
@@ -69,7 +71,7 @@ function TeamInvite() {
     setInviteLink('')
 
     try {
-      if (!token) throw new Error('No valid token found')
+      if (!token) throw new Error(t('teamInvite.errorNoToken'))
       const res = await fetch('/api/team/invite', {
         method: 'POST',
         headers: {
@@ -80,9 +82,10 @@ function TeamInvite() {
       })
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Invitation failed')
+      if (!res.ok) throw new Error(data.error || t('teamInvite.inviteFailed'))
 
-      setSuccess(data.message)
+      // <-- Hier wird jetzt IMMER die Übersetzung benutzt!
+      setSuccess(t('teamInvite.inviteSuccess'))
       if (data.token || data.invite_token) {
         setInviteLink(`${window.location.origin}/invite?token=${data.token || data.invite_token}`)
       }
@@ -100,12 +103,12 @@ function TeamInvite() {
     if (detailsLoading) return
 
     try {
-      if (!token) throw new Error('No valid token found')
-      if (!decisionDetails?.decision) throw new Error('Missing decision data')
+      if (!token) throw new Error(t('teamInvite.errorNoToken'))
+      if (!decisionDetails?.decision) throw new Error(t('teamInvite.errorNoDecision'))
 
       // Only the name is required!
       if (!decisionDetails.decision.name) {
-        setActivateError('Name must not be empty.')
+        setActivateError(t('teamInvite.errorNoName'))
         return
       }
 
@@ -128,19 +131,19 @@ function TeamInvite() {
         evaluations: []
       })
 
-      setActivateSuccess('Decision has been activated.')
+      setActivateSuccess(t('teamInvite.activateSuccess'))
       navigate('/dashboard')
     } catch (err) {
-      setActivateError('Activation failed: ' + err.message)
+      setActivateError(t('teamInvite.activateFailed') + ': ' + err.message)
     }
   }
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
-      <h2 className="text-2xl font-bold">Team Invitation</h2>
+      <h2 className="text-2xl font-bold">{t('teamInvite.title')}</h2>
 
       <div className="space-y-2">
-        <label className="block font-medium">Email Address</label>
+        <label className="block font-medium">{t('teamInvite.email')}</label>
         <input
           type="email"
           className="w-full border rounded p-2"
@@ -148,21 +151,21 @@ function TeamInvite() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
-        <label className="block font-medium mt-4">Role</label>
+        <label className="block font-medium mt-4">{t('teamInvite.role')}</label>
         <select
           className="w-full border rounded p-2"
           value={role}
           onChange={(e) => setRole(e.target.value)}
         >
-          <option value="editor">Editor</option>
-          <option value="viewer">Viewer</option>
+          <option value="editor">{t('teamInvite.editor')}</option>
+          <option value="viewer">{t('teamInvite.viewer')}</option>
         </select>
 
         <button
           onClick={handleInvite}
           className="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
         >
-          Send Invitation
+          {t('teamInvite.sendInvite')}
         </button>
 
         {success && <p className="text-green-600 mt-2">{success}</p>}
@@ -170,21 +173,21 @@ function TeamInvite() {
 
         {inviteLink && (
           <div className="mt-4 p-3 bg-gray-100 dark:bg-neutral-800 rounded">
-            <p className="text-sm">🔗 Copy Invitation Link:</p>
+            <p className="text-sm">🔗 {t('teamInvite.copyInviteLink')}</p>
             <code className="block break-words">{inviteLink}</code>
           </div>
         )}
       </div>
 
       <div>
-        <h3 className="text-lg font-semibold mt-6 mb-2">Team Members</h3>
+        <h3 className="text-lg font-semibold mt-6 mb-2">{t('teamInvite.members')}</h3>
         {loading ? (
-          <p>⏳ Loading…</p>
+          <p>⏳ {t('teamInvite.loading')}</p>
         ) : (
           <ul className="divide-y">
             {teamMembers.map((m) => (
               <li key={m.id} className="py-2">
-                👤 {m.users?.nickname || 'Unknown'} – {m.role} {m.accepted ? '✅' : '⏳'}
+                👤 {m.users?.nickname || t('teamInvite.unknown')} – {t(`teamInvite.${m.role}`)} {m.accepted ? '✅' : '⏳'}
               </li>
             ))}
           </ul>
@@ -197,7 +200,7 @@ function TeamInvite() {
           className="bg-green-600 text-white px-4 py-2 rounded"
           disabled={detailsLoading}
         >
-          Activate Decision
+          {t('teamInvite.activate')}
         </button>
         {activateSuccess && <p className="text-green-600 mt-2">{activateSuccess}</p>}
         {activateError && <p className="text-red-600 mt-2">{activateError}</p>}

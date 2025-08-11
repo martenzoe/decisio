@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
-import { de } from 'date-fns/locale'
+import { de, enUS } from 'date-fns/locale'
 import { useAuthStore } from '../store/useAuthStore'
+import { useTranslation } from 'react-i18next'
 
 export default function TeamDecisionDetail() {
+  const { t, i18n } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
   const [data, setData] = useState(null)
@@ -17,6 +19,7 @@ export default function TeamDecisionDetail() {
   const inputRef = useRef(null)
   const token = useAuthStore((s) => s.token)
   const { user } = useAuthStore()
+  const currentLocale = i18n.language === 'de' ? de : enUS
 
   useEffect(() => {
     if (user?.id && id && token) {
@@ -55,7 +58,7 @@ export default function TeamDecisionDetail() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const json = await res.json()
-      if (!res.ok || !json.decision) throw new Error(json.error || 'Keine Team-Entscheidung gefunden')
+      if (!res.ok || !json.decision) throw new Error(json.error || t('teamDecisionDetail.notFound'))
       setData(json)
     } catch (err) {
       setError(err.message)
@@ -106,7 +109,7 @@ export default function TeamDecisionDetail() {
   }
 
   async function handleDelete(commentId) {
-    if (!window.confirm('Kommentar wirklich löschen?')) return
+    if (!window.confirm(t('teamDecisionDetail.deleteConfirm'))) return
     const res = await fetch(`/api/comments/${commentId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` }
@@ -263,8 +266,8 @@ export default function TeamDecisionDetail() {
 
   // ==== Render ====
   if (error) return <div className="text-red-500 text-center mt-10">{error}</div>
-  if (!user || loading) return <div className="text-gray-400 text-center mt-10">⏳ Team-Entscheidung wird geladen …</div>
-  if (!decision) return <div className="text-red-500 text-center mt-10">Entscheidung nicht gefunden.</div>
+  if (!user || loading) return <div className="text-gray-400 text-center mt-10">{t('teamDecisionDetail.loading')}</div>
+  if (!decision) return <div className="text-red-500 text-center mt-10">{t('teamDecisionDetail.notFound')}</div>
 
   if (
     (options.length === 0 || criteria.length === 0) &&
@@ -272,10 +275,10 @@ export default function TeamDecisionDetail() {
   ) {
     return (
       <div className="text-yellow-700 bg-yellow-50 border border-yellow-300 max-w-xl mx-auto mt-10 p-6 rounded-xl text-center">
-        Optionen oder Kriterien wurden noch nicht angelegt.<br />
-        <span className="text-sm text-gray-500">Sobald mindestens eine Option und ein Kriterium angelegt sind, erscheint hier die Auswertung.</span><br />
+        {t('teamDecisionDetail.missingOptionsOrCriteria')}<br />
+        <span className="text-sm text-gray-500">{t('teamDecisionDetail.missingHint')}</span><br />
         <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded" onClick={fetchData}>
-          Erneut versuchen
+          {t('teamDecisionDetail.retry')}
         </button>
       </div>
     )
@@ -284,22 +287,22 @@ export default function TeamDecisionDetail() {
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-8 text-gray-900 dark:text-gray-100">
       {/* DEADLINE-BADGE */}
-      <div className="flex flex-wrap gap-4 items-center mb-2">
+            <div className="flex flex-wrap gap-4 items-center mb-2">
         {deadline ? (
           <div className={`rounded-lg px-4 py-2 text-sm font-bold shadow ${isClosed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
             <span>
-              Deadline:&nbsp;
-              <span className="font-semibold">{format(deadline, 'Pp', { locale: de })}</span>
-              &nbsp;–&nbsp;
-              {isClosed
-                ? <span>Abgelaufen <span className="text-xs font-normal">(Voting gesperrt)</span></span>
-                : <span>Noch {formatDistanceToNow(deadline, { addSuffix: true, locale: de })}</span>
-              }
-            </span>
+  {t('teamDecisionDetail.deadline')}&nbsp;
+            <span className="font-semibold">{format(deadline, 'Pp', { locale: currentLocale })}</span>
+            &nbsp;–&nbsp;
+            {isClosed
+              ? <span>{t('teamDecisionDetail.expired')} <span className="text-xs font-normal">{t('teamDecisionDetail.votingLocked')}</span></span>
+              : <span>{formatDistanceToNow(deadline, { addSuffix: true, locale: currentLocale })}</span>
+            }
+          </span>
           </div>
         ) : (
           <div className="rounded-lg px-4 py-2 text-sm shadow bg-gray-100 text-gray-500">
-            Keine Deadline gesetzt.
+            {t('teamDecisionDetail.noDeadline')}
           </div>
         )}
         {isAdmin && (
@@ -307,17 +310,17 @@ export default function TeamDecisionDetail() {
             className="ml-2 text-blue-700 underline text-xs"
             onClick={() => navigate(`/team-decision/${decision.id}/edit`)}
           >
-            Deadline ändern
+            {t('teamDecisionDetail.changeDeadline')}
           </button>
         )}
       </div>
 
       {/* TEAM + Status */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6 mb-4">
-        <h3 className="text-lg font-bold mb-2">Team & Status</h3>
+        <h3 className="text-lg font-bold mb-2">{t('teamDecisionDetail.teamStatus')}</h3>
         <div className="flex flex-wrap gap-6">
           {teamWithStatus.length === 0 ? (
-            <span className="text-gray-400">Keine Teammitglieder gefunden.</span>
+            <span className="text-gray-400">{t('teamDecisionDetail.noTeamMembers')}</span>
           ) : (
             teamWithStatus.map(m => (
               <div
@@ -327,12 +330,12 @@ export default function TeamDecisionDetail() {
               >
                 <span className="text-2xl mr-2">{m.voted ? '✅' : '⏳'}</span>
                 <div>
-                  <span className="font-semibold">{m.users?.nickname || m.email || 'Unknown'}</span>
+                  <span className="font-semibold">{m.users?.nickname || m.email || t('teamDecisionDetail.anonymous')}</span>
                   <div className="text-xs text-gray-500">
-                    Role: {m.role}
+                    {t('teamDecisionDetail.role')}: {m.role}
                     {m.voted
-                      ? <span className="ml-2 text-green-700">Voted</span>
-                      : <span className="ml-2 text-yellow-700">Pending</span>}
+                      ? <span className="ml-2 text-green-700">{t('teamDecisionDetail.voted')}</span>
+                      : <span className="ml-2 text-yellow-700">{t('teamDecisionDetail.pending')}</span>}
                   </div>
                 </div>
               </div>
@@ -352,7 +355,7 @@ export default function TeamDecisionDetail() {
         <table className="min-w-full border-collapse">
           <thead>
             <tr>
-              <th className="border px-4 py-2">Option</th>
+              <th className="border px-4 py-2">{t('teamDecisionDetail.option')}</th>
               {criteria.map(c => (
                 <th key={c.id} className="border px-4 py-2">
                   {c.name}
@@ -361,21 +364,16 @@ export default function TeamDecisionDetail() {
                   </span>
                 </th>
               ))}
-              <th className="border px-4 py-2">Team-Result</th>
+              <th className="border px-4 py-2">{t('teamDecisionDetail.teamResult')}</th>
             </tr>
           </thead>
-
-          {/* Hier dein gewünschter Tabellen-Body */}
           <tbody>
             {options.map(o => {
-              // Ergebnis berechnen (immer mit Dezimalstelle)
               const score = isAIResult
                 ? getAIWeightedScore(o.id, meanTeamWeights)
                 : (Object.keys(meanTeamWeights).length
                     ? getTeamWeightedScore(o.id, meanTeamWeights)
                     : '-');
-
-              // Alle Scores als Zahl für Pokal-Logik (ohne '-')
               const allScores = options.map(opt =>
                 isAIResult
                   ? getAIWeightedScore(opt.id, meanTeamWeights)
@@ -388,7 +386,6 @@ export default function TeamDecisionDetail() {
 
               return (
                 <tr key={o.id}>
-                  {/* Option + Pokal */}
                   <td className="border px-4 py-2 font-semibold align-middle">
                     <span className="inline-flex items-center gap-1">
                       {o.name}
@@ -397,7 +394,6 @@ export default function TeamDecisionDetail() {
                       )}
                     </span>
                   </td>
-                  {/* Kriterien-Spalten */}
                   {criteria.map(c => {
                     if (isAIResult) {
                       const aiEval = aiEvaluations.find(e => e.option_id === o.id && e.criterion_id === c.id)
@@ -413,7 +409,6 @@ export default function TeamDecisionDetail() {
                       <td key={c.id} className="border px-4 py-2 text-center align-middle">{avg !== null ? avg : '-'}</td>
                     )
                   })}
-                  {/* Team-Ergebnis */}
                   <td className="border px-4 py-2 text-center font-semibold align-middle">
                     {typeof score === 'number' ? score.toFixed(2) : <span className="text-gray-400">-</span>}
                   </td>
@@ -424,26 +419,25 @@ export default function TeamDecisionDetail() {
         </table>
         <div className="text-xs text-gray-400 mt-2">
           {isAIResult
-            ? <>This decision has been automatically evaluated by AI. Justifications can be found in the cells. The team result is the weighted outcome of all AI evaluations.</>
-            : <>The weighting (in parentheses) is the team average or the default weighting.<br />
-            The results are identical for all team members. Changes can only be made through the evaluation mask.</>
+            ? <>{t('teamDecisionDetail.aiTableHint')}</>
+            : <>{t('teamDecisionDetail.manualTableHint')}</>
           }
         </div>
       </div>
 
       {/* Kommentare */}
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
-        <h3 className="text-xl font-semibold">💬 Comments</h3>
+        <h3 className="text-xl font-semibold">💬 {t('teamDecisionDetail.comments')}</h3>
         <form onSubmit={handleCommentSubmit} className="flex flex-col sm:flex-row gap-4">
           <input
             ref={inputRef}
             value={commentInput}
             onChange={e => setCommentInput(e.target.value)}
-            placeholder="Kommentiere hier …"
+            placeholder={t('teamDecisionDetail.commentPlaceholder')}
             className="flex-1 px-4 py-2 border rounded-md dark:bg-gray-900 dark:border-gray-600"
           />
           <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
-            {editingId ? '💾 Save' : '➕ Post'}
+            {editingId ? t('teamDecisionDetail.saveComment') : t('teamDecisionDetail.postComment')}
           </button>
         </form>
         <div className="space-y-4">
@@ -452,7 +446,7 @@ export default function TeamDecisionDetail() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="font-medium text-sm">
-                    {c.nickname ? `@${c.nickname}` : 'Anonym'}
+                    {c.nickname ? `@${c.nickname}` : t('teamDecisionDetail.anonymous')}
                   </p>
                   <p className="text-gray-700 dark:text-gray-300">{c.text}</p>
                   <p className="text-xs text-gray-400">
@@ -461,8 +455,12 @@ export default function TeamDecisionDetail() {
                 </div>
                 {String(user?.id) === String(c.user_id) && (
                   <div className="flex gap-2 text-sm mt-1">
-                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">Edit</button>
-                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">Delete</button>
+                    <button onClick={() => handleEdit(c)} className="text-blue-500 hover:underline">
+                      {t('teamDecisionDetail.edit')}
+                    </button>
+                    <button onClick={() => handleDelete(c.id)} className="text-red-500 hover:underline">
+                      {t('teamDecisionDetail.delete')}
+                    </button>
                   </div>
                 )}
               </div>
@@ -473,3 +471,4 @@ export default function TeamDecisionDetail() {
     </div>
   )
 }
+
