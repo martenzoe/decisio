@@ -14,7 +14,8 @@
     "profileMenu": "Profile menu",
     "editProfile": "Edit Profile",
     "changePassword": "Change Password",
-    "logout": "Logout"
+    "logout": "Logout",
+    "useCases": "Use Cases"
   },
   "dashboard": {
     "yourDecisions": "Your decisions",
@@ -293,17 +294,16 @@
     "evaluationsHeading": "Evaluations",
     "optionColumn": "Option",
     "saveButton": "Save"
-},
-"profile": {
-  "title": "Edit Profile",
-  "nickname": "Nickname",
-  "firstName": "First Name",
-  "lastName": "Last Name",
-  "birthday": "Birthday",
-  "save": "Save",
-  "saved": "✅ Profile saved."
-}
-,
+  },
+  "profile": {
+    "title": "Edit Profile",
+    "nickname": "Nickname",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "birthday": "Birthday",
+    "save": "Save",
+    "saved": "✅ Profile saved."
+  },
   "changePassword": {
     "title": "Change Password",
     "current": "Current password:",
@@ -313,5 +313,107 @@
     "success": "✅ Password changed successfully.",
     "error": "❌ Error changing password.",
     "serverError": "❌ Server error."
+  },
+  "useCases": {
+    "title": "Use Cases & How Decisia Scores",
+    "intro": "Decisia structures decisions — solo or as a team. Define options, criteria, and weights, score each option per criterion, and get a transparent ranking. If you like, AI can pre‑score for you.",
+    "how": {
+      "title": "How the scoring works",
+      "l1": "<b>Criteria & Weights:</b> Private: assign an importance to each criterion. Team: each person has their own weights. We normalize weights for calculation (sum = 1).",
+      "l2": "<b>Rating scale:</b> Private <b>1–10</b>, Team <b>0–10</b>. 0 = “not met/neutral”.",
+      "l3": "<b>Option score (Private):</b> <code>s_i = Σ w_j · r_ij</code>, with <code>w_j = importance_j / Σ importance</code>.",
+      "l4": "<b>Team score:</b> Per person <code>s_i^(u) = Σ w_j^(u) · r_ij^(u)</code>, team score <code>= avg_u(s_i^(u))</code>.",
+      "l5": "<b>AI mode:</b> Private: AI fills the 1–10 matrix + explanations (editable). Team: owner/admin can run AI — AI evaluations are saved and the decision is locked (AI‑lock).",
+      "l6": "<b>Deadline (Team):</b> After the deadline, inputs are locked."
+    },
+    "miniExample": {
+      "title": "Mini example (Private)",
+      "text": "Criteria & importance: Usability 40, Integrations 30, Security 20, Cost 10 → weights w = 0.4 / 0.3 / 0.2 / 0.1",
+      "head1": "Usability (w=0.4)",
+      "head2": "Integrations (w=0.3)",
+      "head3": "Security (w=0.2)",
+      "head4": "Cost (w=0.1)"
+    },
+    "table": {
+      "optionVsCriterion": "Option \\ Criterion",
+      "weightedScore": "Weighted Score",
+      "criterion": "Criterion",
+      "score": "Score"
+    },
+    "calcPrivate": {
+      "title": "Interactive Mini‑Calculator (Private)",
+      "step1": "<b>Step 1:</b> Set importances — we normalize automatically.",
+      "step2": "<b>Step 2:</b> Enter ratings per option & criterion (scale 1–10).",
+      "step3": "Step 3: Ranking (descending):",
+      "normalized": "w = {{value}}",
+      "weightAria": "Weight for {{criterion}}",
+      "ratingAria": "Rating for {{option}} on {{criterion}}",
+      "optionA": "Tool A",
+      "optionB": "Tool B",
+      "optionC": "Tool C",
+      "criteria": {
+        "usability": "Usability",
+        "integrations": "Integrations",
+        "security": "Security",
+        "costs": "Cost"
+      }
+    },
+    "calcTeam": {
+      "title": "Interactive Mini‑Calculator (Team)",
+      "subtitle": "Each person sets their own weights and ratings (scale 0–10). Team score = average of personal scores.",
+      "personA": "Person A",
+      "personB": "Person B",
+      "weightsFor": "{{person}} — Weights",
+      "ratingsFor": "{{person}} — Ratings (0–10)",
+      "weightAria": "Weight for {{criterion}} by {{person}}",
+      "ratingAria": "Rating by {{person}} for {{supplier}} on {{criterion}}",
+      "supplierA": "Supplier A",
+      "supplierB": "Supplier B",
+      "criteria": {
+        "price": "Price",
+        "quality": "Quality",
+        "delivery": "Delivery time",
+        "sla": "SLA"
+      },
+      "personScores": "Personal scores",
+      "personScoreLine": "{{person}}: {{supplier}} = {{score}}",
+      "teamScores": "Team scores (average)",
+      "teamScoreLine": "{{supplier}} = {{score}}",
+      "ranking": "Ranking"
+    },
+    "uc": {
+      "title": "Typical Use Cases",
+      "uc1": {
+        "title": "1) Tool selection in a team (SaaS)",
+        "l1": "Options: Tool A, Tool B, Tool C",
+        "l2": "Criteria: Usability, Integrations, Security, Cost",
+        "l3": "Each person sets their own weights & ratings (0–10)",
+        "l4": "Team score = average of personal scores; ranking decides"
+      },
+      "uc2": {
+        "title": "2) Feature prioritization (Product)",
+        "l1": "Criteria: User value, Effort (inverted), Strategic fit, Risk",
+        "l2": "Private: set importance (e.g., 40/20/25/15), rate 1–10",
+        "l3": "Team: per-person weights; average forms consensus"
+      },
+      "uc3": {
+        "title": "3) Hiring (Private, AI‑assisted)",
+        "l1": "Criteria: Skill fit, Team fit, Learning curve, Salary band fit",
+        "l2": "AI generates 1–10 + explanations; you adjust and save"
+      },
+      "uc4": {
+        "title": "4) Vendor selection (Team, with deadline)",
+        "l1": "Owner/admin sets a deadline; inputs locked afterwards",
+        "l2": "Optional: AI auto by owner/admin (AI‑lock)"
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": { "q": "Which scale?", "a": "Private 1–10, Team 0–10. AI uses 1–10." },
+      "q2": { "q": "How do weights work?", "a": "Private: importances are normalized (sum=1). Team: per‑person normalization; team score = average of personal scores." },
+      "q3": { "q": "Can AI overwrite?", "a": "Private: no (you can adjust). Team: yes — owner/admin can run AI; then AI‑lock." },
+      "q4": { "q": "What about duplicate names?", "a": "The UI flags duplicates; saving is blocked — please rename." },
+      "q5": { "q": "What does 0 mean in team mode?", "a": "“Not met/neutral.”" }
+    }
   }
 }

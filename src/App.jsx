@@ -1,4 +1,3 @@
-// src/App.jsx
 import { Routes, Route } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from './store/useAuthStore'
@@ -35,6 +34,9 @@ import NotificationsPage from './pages/NotificationsPage'
 import TeamDecisionDetail from './pages/TeamDecisionDetail'
 import DecisionRouter from './pages/DecisionRouter'
 
+// NEU: Use Cases Seite
+import UseCases from './pages/UseCases'
+
 function App() {
   const loadUserFromToken = useAuthStore((state) => state.loadUserFromToken)
   const user = useAuthStore((state) => state.user)
@@ -53,6 +55,7 @@ function App() {
       <Routes>
         {/* 🌐 Öffentliche Seiten */}
         <Route path="/" element={<MainLayout><Home /></MainLayout>} />
+        <Route path="/use-cases" element={<MainLayout><UseCases /></MainLayout>} /> {/* ⇐ NEU */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/logout" element={<Logout />} />

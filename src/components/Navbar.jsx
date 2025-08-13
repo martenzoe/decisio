@@ -25,10 +25,11 @@ function Navbar() {
   const avatarUrl = user?.avatar_url || defaultAvatar
   const nickname = user?.nickname || 'User'
 
-  // Anpassung: label ist jetzt ein Key (siehe JSON)
+  // label ist ein i18n-Key
   const navItems = [
     { path: '/', label: 'navbar.home' },
     { path: '/dashboard', label: 'navbar.dashboard' },
+    { path: '/use-cases', label: 'navbar.useCases' }, // ⇐ NEU
     { path: '/faq', label: 'navbar.faq' },
     { path: '/kontakt', label: 'navbar.contact' }
   ]
@@ -62,7 +63,6 @@ function Navbar() {
         headers: { Authorization: `Bearer ${token}` }
       })
       const result = await res.json()
-
       if (Array.isArray(result)) {
         setNotifications(result)
       } else {

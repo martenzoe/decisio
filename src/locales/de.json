@@ -14,7 +14,8 @@
     "profileMenu": "Profilmenü",
     "editProfile": "Profil bearbeiten",
     "changePassword": "Passwort ändern",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "useCases": "Use Cases"
   },
   "dashboard": {
     "yourDecisions": "Deine Entscheidungen",
@@ -294,22 +295,125 @@
     "optionColumn": "Option",
     "saveButton": "Speichern"
   },
-"profile": {
-  "title": "Profil bearbeiten",
-  "nickname": "Spitzname",
-  "firstName": "Vorname",
-  "lastName": "Nachname",
-  "birthday": "Geburtstag",
-  "save": "Speichern",
-  "saved": "✅ Profil gespeichert."
-},
-"changePassword": {
-  "title": "Passwort ändern",
-  "current": "Aktuelles Passwort:",
-  "new": "Neues Passwort:",
-  "save": "Speichern",
-  "forgot": "Passwort vergessen?",
-  "success": "✅ Passwort erfolgreich geändert.",
-  "error": "❌ Fehler beim Ändern des Passworts.",
-  "serverError": "❌ Serverfehler."
-}}
+  "profile": {
+    "title": "Profil bearbeiten",
+    "nickname": "Spitzname",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "birthday": "Geburtstag",
+    "save": "Speichern",
+    "saved": "✅ Profil gespeichert."
+  },
+  "changePassword": {
+    "title": "Passwort ändern",
+    "current": "Aktuelles Passwort:",
+    "new": "Neues Passwort:",
+    "save": "Speichern",
+    "forgot": "Passwort vergessen?",
+    "success": "✅ Passwort erfolgreich geändert.",
+    "error": "❌ Fehler beim Ändern des Passworts.",
+    "serverError": "❌ Serverfehler."
+  },
+  "useCases": {
+    "title": "Use Cases & Wie Decisia rechnet",
+    "intro": "Decisia strukturiert Entscheidungen – allein oder im Team. Du definierst Optionen, Kriterien und Gewichte, bewertest jede Option je Kriterium und erhältst eine transparente Rangliste. Auf Wunsch hilft dir die KI beim Vorbewerten.",
+    "how": {
+      "title": "So funktioniert die Bewertung",
+      "l1": "<b>Kriterien & Gewichte:</b> Privat: jedem Kriterium eine Bedeutung (Importance) geben. Team: jede Person vergibt eigene Gewichte. Gewichte werden für die Berechnung normalisiert (Summe = 1).",
+      "l2": "<b>Bewerten (Skala):</b> Privat <b>1–10</b>, Team <b>0–10</b>. 0 = „nicht erfüllt/neutral“.",
+      "l3": "<b>Score je Option (Privat):</b> <code>s_i = Σ w_j · r_ij</code>, mit <code>w_j = importance_j / Σ importance</code>.",
+      "l4": "<b>Team‑Score:</b> Pro Person <code>s_i^(u) = Σ w_j^(u) · r_ij^(u)</code>, Team‑Score <code>= Durchschnitt_u(s_i^(u))</code>.",
+      "l5": "<b>KI‑Modus:</b> Privat füllt die KI die Matrix (1–10) + Begründungen (editierbar). Team: Owner/Admin starten KI – AI‑Bewertungen werden gespeichert und sperren die Entscheidung (AI‑Lock).",
+      "l6": "<b>Deadline (Team):</b> Nach Ablauf sind Eingaben gesperrt."
+    },
+    "miniExample": {
+      "title": "Mini‑Rechenbeispiel (Privat)",
+      "text": "Kriterien & Importance: Usability 40, Integrationen 30, Sicherheit 20, Kosten 10 → Normalisierung w = 0.4 / 0.3 / 0.2 / 0.1",
+      "head1": "Usability (w=0.4)",
+      "head2": "Integrationen (w=0.3)",
+      "head3": "Sicherheit (w=0.2)",
+      "head4": "Kosten (w=0.1)"
+    },
+    "table": {
+      "optionVsCriterion": "Option \\ Kriterium",
+      "weightedScore": "Gewichteter Score",
+      "criterion": "Kriterium",
+      "score": "Score"
+    },
+    "calcPrivate": {
+      "title": "Interaktiver Mini‑Rechner (Privat)",
+      "step1": "<b>Schritt 1:</b> Gewichte (Importance) vergeben – Summe wird automatisch normalisiert.",
+      "step2": "<b>Schritt 2:</b> Bewertungen je Option & Kriterium (Skala 1–10) eintragen.",
+      "step3": "Schritt 3: Rangliste (absteigend):",
+      "normalized": "w = {{value}}",
+      "weightAria": "Gewicht für {{criterion}}",
+      "ratingAria": "Bewertung für {{option}} bei {{criterion}}",
+      "optionA": "Tool A",
+      "optionB": "Tool B",
+      "optionC": "Tool C",
+      "criteria": {
+        "usability": "Usability",
+        "integrations": "Integrationen",
+        "security": "Sicherheit",
+        "costs": "Kosten"
+      }
+    },
+    "calcTeam": {
+      "title": "Interaktiver Mini‑Rechner (Team)",
+      "subtitle": "Jede Person vergibt eigene Gewichte und Bewertungen (Skala 0–10). Team‑Score = Durchschnitt der Personenscores.",
+      "personA": "Person A",
+      "personB": "Person B",
+      "weightsFor": "{{person}} – Gewichte",
+      "ratingsFor": "{{person}} – Bewertungen (0–10)",
+      "weightAria": "Gewicht für {{criterion}} von {{person}}",
+      "ratingAria": "Bewertung von {{person}} für {{supplier}} bei {{criterion}}",
+      "supplierA": "Lieferant A",
+      "supplierB": "Lieferant B",
+      "criteria": {
+        "price": "Preis",
+        "quality": "Qualität",
+        "delivery": "Lieferzeit",
+        "sla": "SLA"
+      },
+      "personScores": "Personenscores",
+      "personScoreLine": "{{person}}: {{supplier}} = {{score}}",
+      "teamScores": "Team‑Scores (Durchschnitt)",
+      "teamScoreLine": "{{supplier}} = {{score}}",
+      "ranking": "Rangliste"
+    },
+    "uc": {
+      "title": "Typische Use Cases",
+      "uc1": {
+        "title": "1) Toolauswahl im Team (SaaS)",
+        "l1": "Optionen: Tool A, Tool B, Tool C",
+        "l2": "Kriterien: Usability, Integrationen, Sicherheit, Kosten",
+        "l3": "Jede Person vergibt eigene Gewichte & Bewertungen (0–10)",
+        "l4": "Team‑Score = Durchschnitt der Personenscores; Rangliste entscheidet"
+      },
+      "uc2": {
+        "title": "2) Feature‑Priorisierung (Produkt)",
+        "l1": "Kriterien: Nutzer‑Nutzen, Aufwand (invertiert), Strategische Passung, Risiko",
+        "l2": "Privat: Importance setzen (z. B. 40/20/25/15), 1–10 bewerten",
+        "l3": "Team: eigene Gewichte je Person; Durchschnitt bildet Konsens"
+      },
+      "uc3": {
+        "title": "3) Hiring (Privat, mit KI‑Anstoß)",
+        "l1": "Kriterien: Skill‑Fit, Team‑Fit, Lernkurve, Gehaltsband‑Fit",
+        "l2": "KI erzeugt 1–10 + Begründungen; du passt an und speicherst"
+      },
+      "uc4": {
+        "title": "4) Lieferantenauswahl (Team, mit Deadline)",
+        "l1": "Owner/Admin setzen Deadline; nach Ablauf gesperrt",
+        "l2": "Optional: KI‑Auto durch Owner/Admin (AI‑Lock)"
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": { "q": "Welche Skala?", "a": "Privat 1–10, Team 0–10. KI nutzt 1–10." },
+      "q2": { "q": "Wie wirken Gewichte?", "a": "Privat: Importance wird normalisiert (Summe=1). Team: je Person eigene Normalisierung; Team‑Score = Durchschnitt der Personenscores." },
+      "q3": { "q": "Kann KI überschreiben?", "a": "Privat: nein (du kannst anpassen). Team: ja – Owner/Admin können KI starten; dann AI‑Lock." },
+      "q4": { "q": "Was passiert bei doppelten Namen?", "a": "Die UI markiert Duplikate; Speichern ist blockiert – bitte umbenennen." },
+      "q5": { "q": "Was bedeutet 0 im Team?", "a": "„Nicht erfüllt/neutral“." }
+    }
+  }
+}
