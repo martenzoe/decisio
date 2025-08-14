@@ -14,6 +14,12 @@ export default function DecisionDetail() {
 
   const { user, token } = useAuthStore()
 
+  // NEW: AI summary state
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState(null)
+  const [aiSummary, setAiSummary] = useState(null)
+  const [aiTopOption, setAiTopOption] = useState(null)
+
   useEffect(() => {
     if (user && token && id) {
       fetchData()
@@ -33,8 +39,46 @@ export default function DecisionDetail() {
       const json = await res.json()
       if (!res.ok || !json.decision) throw new Error(json.error || 'No decision found')
       setData(json)
+
+      // If this is an AI decision, fetch a short AI summary (does NOT save anything)
+      if (json.decision?.mode === 'ai') {
+        fetchAiSummary(json)
+      }
     } catch (err) {
       setError(err.message)
+    }
+  }
+
+  // Only reads a summary/top option from the AI endpoint; does not persist anything.
+  async function fetchAiSummary(details) {
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const decisionName = details?.decision?.name || details?.decision?.title || ''
+      const description = details?.decision?.description || ''
+      const options = (details?.options || []).map(o => o.name)
+      const criteria = (details?.criteria || []).map(c => ({ name: c.name }))
+
+      const res = await fetch('/api/ai/recommendation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ decisionName, description, options, criteria })
+      })
+
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'AI summary failed')
+
+      // From your ai.js: { recommendations, summary, top_option, top_option_index }
+      setAiSummary(json.summary || null)
+      setAiTopOption(json.top_option || null)
+    } catch (e) {
+      console.error('AI summary error:', e)
+      setAiError(e.message)
+    } finally {
+      setAiLoading(false)
     }
   }
 
@@ -108,7 +152,7 @@ export default function DecisionDetail() {
     <div className="max-w-5xl mx-auto py-10 px-4 space-y-8 text-gray-900 dark:text-gray-100">
       {/* Decision Summary */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-xl p-6">
-        <h2 className="text-2xl font-bold mb-2">{decision.title}</h2>
+        <h2 className="text-2xl font-bold mb-2">{decision.title || decision.name}</h2>
         <p className="text-gray-600 dark:text-gray-300">{decision.description}</p>
       </div>
 
@@ -141,6 +185,59 @@ export default function DecisionDetail() {
             ))}
           </tbody>
         </table>
+
+        {/* AI summary box (only for AI decisions) */}
+        {decision.mode === 'ai' && (
+          <div className="mt-6">
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-semibold">🤖 AI Summary</h4>
+
+                  {aiLoading && (
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Generating summary …
+                    </p>
+                  )}
+
+                  {aiError && (
+                    <p className="text-sm text-red-600">
+                      {aiError}
+                    </p>
+                  )}
+
+                  {!aiLoading && !aiError && (
+                    <>
+                      {aiTopOption && (
+                        <p className="text-sm">
+                          <span className="font-medium">🏆 Top option:</span> {aiTopOption}
+                        </p>
+                      )}
+                      {aiSummary && (
+                        <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">
+                          {aiSummary}
+                        </p>
+                      )}
+                      {!aiSummary && (
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          No AI summary available.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Manual refresh button for summary */}
+                <button
+                  onClick={() => fetchAiSummary(data)}
+                  className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition"
+                >
+                  🔄 Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Comments Section */}
