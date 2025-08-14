@@ -1,4 +1,5 @@
 # Decisio — Collaborative Decision App
+# Decisio — Collaborative Decision App
 
 **Decisio** is a modern web app for structured team **and** solo decision-making. Define options & criteria, set weights, rate your options, and get a transparent ranking. In team mode, everyone brings their own priorities — Decisio averages personal scores for a fair, bias-aware result.
 
