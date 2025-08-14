@@ -316,14 +316,14 @@
   },
   "useCases": {
     "title": "Use Cases & How Decisia Scores",
-    "intro": "Decisia structures decisions — solo or as a team. Define options, criteria, and weights, score each option per criterion, and get a transparent ranking. If you like, AI can pre‑score for you.",
+    "intro": "Decisia structures decisions — solo or as a team. Define options, criteria, and weights, score each option per criterion, and get a transparent ranking. If you like, AI can pre-score for you.",
     "how": {
       "title": "How the scoring works",
-      "l1": "<b>Criteria & Weights:</b> Private: assign an importance to each criterion. Team: each person has their own weights. We normalize weights for calculation (sum = 1).",
-      "l2": "<b>Rating scale:</b> Private <b>1–10</b>, Team <b>0–10</b>. 0 = “not met/neutral”.",
-      "l3": "<b>Option score (Private):</b> <code>s_i = Σ w_j · r_ij</code>, with <code>w_j = importance_j / Σ importance</code>.",
-      "l4": "<b>Team score:</b> Per person <code>s_i^(u) = Σ w_j^(u) · r_ij^(u)</code>, team score <code>= avg_u(s_i^(u))</code>.",
-      "l5": "<b>AI mode:</b> Private: AI fills the 1–10 matrix + explanations (editable). Team: owner/admin can run AI — AI evaluations are saved and the decision is locked (AI‑lock).",
+      "l1": "<b>Set weights:</b> Decide how important each criterion is. We automatically scale them to 100% (sum = 1).",
+      "l2": "<b>Rate options:</b> Private <b>1–10</b>, Team <b>0–10</b> (0 = neutral/not met).",
+      "l3": "<b>Result (Private):</b> For each option, multiply <b>weight × rating</b> per criterion and add it up. Higher = better.",
+      "l4": "<b>Result (Team):</b> Each person has their own weights & ratings. First compute a personal score, then take the team average.",
+      "l5": "<b>AI mode:</b> In private decisions, AI can fill the 1–10 matrix with explanations (you can edit). In teams, owner/admin can run AI; afterwards the decision is locked (AI-lock).",
       "l6": "<b>Deadline (Team):</b> After the deadline, inputs are locked."
     },
     "miniExample": {
@@ -341,7 +341,7 @@
       "score": "Score"
     },
     "calcPrivate": {
-      "title": "Interactive Mini‑Calculator (Private)",
+      "title": "Interactive Mini-Calculator (Private)",
       "step1": "<b>Step 1:</b> Set importances — we normalize automatically.",
       "step2": "<b>Step 2:</b> Enter ratings per option & criterion (scale 1–10).",
       "step3": "Step 3: Ranking (descending):",
@@ -359,7 +359,7 @@
       }
     },
     "calcTeam": {
-      "title": "Interactive Mini‑Calculator (Team)",
+      "title": "Interactive Mini-Calculator (Team)",
       "subtitle": "Each person sets their own weights and ratings (scale 0–10). Team score = average of personal scores.",
       "personA": "Person A",
       "personB": "Person B",
@@ -397,21 +397,21 @@
         "l3": "Team: per-person weights; average forms consensus"
       },
       "uc3": {
-        "title": "3) Hiring (Private, AI‑assisted)",
+        "title": "3) Hiring (Private, AI-assisted)",
         "l1": "Criteria: Skill fit, Team fit, Learning curve, Salary band fit",
         "l2": "AI generates 1–10 + explanations; you adjust and save"
       },
       "uc4": {
         "title": "4) Vendor selection (Team, with deadline)",
         "l1": "Owner/admin sets a deadline; inputs locked afterwards",
-        "l2": "Optional: AI auto by owner/admin (AI‑lock)"
+        "l2": "Optional: AI auto by owner/admin (AI-lock)"
       }
     },
     "faq": {
       "title": "FAQ",
       "q1": { "q": "Which scale?", "a": "Private 1–10, Team 0–10. AI uses 1–10." },
-      "q2": { "q": "How do weights work?", "a": "Private: importances are normalized (sum=1). Team: per‑person normalization; team score = average of personal scores." },
-      "q3": { "q": "Can AI overwrite?", "a": "Private: no (you can adjust). Team: yes — owner/admin can run AI; then AI‑lock." },
+      "q2": { "q": "How do weights work?", "a": "Private: importances are normalized (sum=1). Team: per-person normalization; team score = average of personal scores." },
+      "q3": { "q": "Can AI overwrite?", "a": "Private: no (you can adjust). Team: yes — owner/admin can run AI; then AI-lock." },
       "q4": { "q": "What about duplicate names?", "a": "The UI flags duplicates; saving is blocked — please rename." },
       "q5": { "q": "What does 0 mean in team mode?", "a": "“Not met/neutral.”" }
     }
