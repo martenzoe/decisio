@@ -1,39 +1,64 @@
-# Decisio – Collaborative Decision App
+# Decisio — Collaborative Decision App
+# Decisio — Collaborative Decision App
 
-**Decisio** is a modern web application for structured team and solo decision-making. Designed for small and medium-sized teams, Decisio lets you collect, weight, and discuss options – for transparent, bias-free results.  
-Live: [https://decisio-two.vercel.app/](https://decisio-two.vercel.app/)
+**Decisio** is a modern web app for structured team **and** solo decision-making. Define options & criteria, set weights, rate your options, and get a transparent ranking. In team mode, everyone brings their own priorities — Decisio averages personal scores for a fair, bias-aware result.
 
----
+**Live:** https://decisio-two.vercel.app/
 
-## Features
-
-- **Structured decision process:** Define options & criteria, assign weights, evaluate together.
-- **Team & Solo Mode:** Individual or collaborative decisions.
-- **Role management:** Owner, Admin, Editor, Viewer – each with clear permissions.
-- **Weighted scoring:** Each team member can submit their own weightings and ratings; the team result is always transparent and recalculated automatically.
-- **Comments & discussions:** Built-in comment function for transparent communication.
-- **User-friendly UI:** Clean, intuitive design (React + Tailwind CSS).
-- **Secure backend:** JWT authentication, Supabase as database.
-- **API-first:** All logic available via REST API, Swagger documentation included.
+> **Roles:** `Owner` (creator), `Editor`, `Viewer`  
+> When inviting, you choose **Editor** or **Viewer**. There is **no Admin** role.
 
 ---
 
-## Tech Stack
+## ✨ Features
 
-- **Frontend:** React (Vite), Zustand, Tailwind CSS
-- **Backend:** Node.js (Express), Supabase (PostgreSQL), JWT Auth
-- **Deployment:** Vercel (Frontend), Server (Backend)
-- **API Docs:** Swagger UI at `/api-docs`
+- **Structured process** – options, criteria, weights, ratings, clear results  
+- **Team & Solo mode** – decide alone or collaborate  
+- **Transparent scoring** – simple “weight × rating, then add up”  
+- **Optional AI assist** – pre-fill ratings + short reasons (you can edit)  
+- **Roles & invites** – Owner has full control; Editors rate/comment; Viewers read  
+- **Comments & notifications** – discuss and stay in the loop  
+- **Dark mode** & **i18n (de/en)** – powered by `react-i18next`  
+- **Fast UI** – Vite + React + Tailwind CSS
 
 ---
 
-## Getting Started
+## 🧠 How scoring works (human-friendly)
 
-### 1. Clone the repository
+1. **Choose criteria** (e.g., Usability, Security, Cost) and give each an **importance**.  
+   We convert importances to **weights that sum to 1** (100%).
+2. **Rate each option** per criterion.  
+   - Solo: **1–10**  
+   - Team: **0–10** (where **0** = “not met/neutral”)
+3. **Option score** = **(weight × rating) + (weight × rating) + …**  
+   Higher total = better option.
+4. **Team mode:** Everyone has **their own** weights & ratings.  
+   We compute each person’s option score, then take the **average** across people.
+5. **AI mode (optional):** AI can **pre-score** with explanations.  
+   In team mode the **Owner** may lock in AI results (“AI-lock”), if enabled.
+6. **Deadline (team):** After the deadline, inputs are locked to keep it fair.
+
+> Prefer the plain words above in the UI. We deliberately avoid math symbols so non-technical users understand it immediately.
+
+---
+
+## 📦 Tech Stack
+
+- **Frontend:** React (Vite), Zustand, React Router, Tailwind CSS, `react-i18next`
+- **Backend (expected):** Node/Express + Supabase/Postgres + JWT (adapt to your setup)
+- **Deployment:** Vercel (frontend) + your server/host (backend)
 
 
-git clone https://github.com/your-org/decisio.git
+---
+
+## 🚀 Getting Started
+
+### 1) Clone
+
+```bash
+git clone https://github.com/martenzoe/decisio
 cd decisio
+
 
 ### 2. Install dependencies
 
@@ -48,13 +73,24 @@ npm install
 ### 3. Environment variables
 Create a .env file in /server with:
 
-    1. SUPABASE_URL=your_supabase_url
-    2. SUPABASE_KEY=your_supabase_service_key
-    3. JWT_SECRET=your_super_secret
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+OPENAI_API_KEY=
+RESEND_API_KEY=
+FROM_EMAIL=
+FRONTEND_URL=
+JWT_SECRET=
+
+Create a .env file in /decisio with:
+
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_API_URL=
+
 
 ### 4. Run locally
 Frontend:
-cd frontend
+cd decisio
 npm run dev
 
 Backend:
@@ -67,7 +103,6 @@ Make sure all tables (decisions, options, criteria, evaluations, team_members, e
 
 ## Usage
 
-
 Create a decision: Add options, criteria, and (for teams) invite members.
 
 Rate and weight: Each user submits their own weights and ratings.
@@ -76,16 +111,57 @@ Results: The team average is always shown – results cannot be manipulated by a
 
 Comment: Use the comment section to discuss, justify, and review decisions.
 
+## 🔐 Roles & Permissions
 
+| Action                                  | Owner | Editor | Viewer |
+|-----------------------------------------|:-----:|:------:|:------:|
+| Create / delete decision                |  ✅   |   —    |   —    |
+| Edit title/description/mode             |  ✅   |   —    |   —    |
+| Add / edit options & criteria           |  ✅   |   —    |   —    |
+| Invite members & assign roles           |  ✅   |   —    |   —    |
+| Set / change deadline                   |  ✅   |   —    |   —    |
+| Run AI pre-scoring (and AI-lock)        |  ✅   |   —    |   —    |
+| Enter ratings                           |  ✅   |   ✅   |   —    |
+| Comment                                 |  ✅   |   ✅   | (read-only if visible) |
+| View team status & results              |  ✅   |   ✅   |   ✅    |
 
-## Roles & Permissions
+> When inviting, you choose **Editor** or **Viewer**. The **Owner** is the creator and always has full control.
 
-| Role   | Edit Options/Criteria | Rate/Weight | Invite | Close Decision |
-|--------|:---------------------:|:-----------:|:------:|:--------------:|
-| Owner  |          ✅           |     ✅      |   ✅   |      ✅        |
-| Admin  |          ✅           |     ✅      |   ❌   |      ❌        |
-| Editor |          ✅           |     ✅      |   ❌   |      ❌        |
-| Viewer |          ❌           |     ❌      |   ❌   |      ❌        |
+---
+
+## 🌍 Internationalization
+
+- Translations: `src/locales/de.json`, `src/locales/en.json`
+- Language switcher in the Navbar toggles **de/en**
+- Use `<Trans>` for bold/inline code/links inside translations
+
+---
+
+## 🔔 Notifications (frontend)
+
+- `GET /api/notifications` — list notifications for the bell  
+- `PUT /api/notifications/:id/read` — mark one as read
+
+> Configure API base path via `VITE_API_BASE_URL`.
+
+---
+
+## 🧪 Quick paper example
+
+- **Importances:** Usability 40, Integrations 30, Security 20, Cost 10  
+- **Normalized weights:** `0.4 / 0.3 / 0.2 / 0.1`  
+- **Option score:** `0.4×U + 0.3×I + 0.2×S + 0.1×C` (ratings on the chosen scale)  
+- **Team mode:** do the same per person and **average** the option’s scores.
+
+---
+
+## 🤝 Contributing
+
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `chore:`, …
+- Branches: `feat/<topic>`, `fix/<topic>`, `docs/<topic>`
+- Test in **both languages** before opening a PR
+
+---
 
 
 Live Demo
@@ -96,6 +172,6 @@ Login and demo credentials are available upon request.
 API Documentation
 After starting the backend, open http://localhost:3000/api-docs for interactive Swagger documentation.
 
-License
-MIT – see LICENSE.md for details.
+## 📄 License
+MIT — see `LICENSE`.
 
