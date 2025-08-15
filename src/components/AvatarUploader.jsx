@@ -1,45 +1,42 @@
 import { useState } from 'react'
-import { supabase } from '../supabaseClient'
 import { CameraIcon } from 'lucide-react'
 import { useAuthStore } from '../store/useAuthStore'
 
 function AvatarUploader({ avatarUrl, onUpload }) {
+  const { token } = useAuthStore()
+  const [preview, setPreview] = useState(avatarUrl || '')
   const [uploading, setUploading] = useState(false)
-  const { user } = useAuthStore()
+  const [error, setError] = useState('')
 
-  const handleUpload = async (e) => {
+  const handleFile = async (e) => {
     const file = e.target.files?.[0]
-    if (!file || !user?.id) return
-
+    if (!file) return
+    setError('')
     setUploading(true)
 
     try {
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${crypto.randomUUID()}.${fileExt}`
-      const filePath = `${user.id}/${fileName}`
+      // lokale Vorschau
+      const reader = new FileReader()
+      reader.onload = () => setPreview(String(reader.result))
+      reader.readAsDataURL(file)
 
-      // Upload in Bucket "avatars"
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: true,
-        })
+      const form = new FormData()
+      form.append('file', file)
 
-      if (uploadError) throw new Error(uploadError.message)
+      const res = await fetch('/api/users/avatar', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form
+      })
 
-      // 📎 Öffentliche URL generieren
-      const {
-        data: { publicUrl },
-        error: publicUrlError,
-      } = supabase.storage.from('avatars').getPublicUrl(filePath)
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Upload failed')
 
-      if (publicUrlError || !publicUrl) throw new Error('URL konnte nicht geladen werden')
-
-      onUpload(publicUrl)
+      // neue URL nach oben durchreichen
+      onUpload?.(json.url)
     } catch (err) {
-      console.error('❌ Avatar-Upload fehlgeschlagen:', err.message)
-      alert(`Fehler: ${err.message}`)
+      console.error('❌ Avatar upload failed:', err)
+      setError(err.message)
     } finally {
       setUploading(false)
     }
@@ -48,22 +45,18 @@ function AvatarUploader({ avatarUrl, onUpload }) {
   return (
     <div className="relative inline-block text-center">
       <img
-        src={avatarUrl || '/default-avatar.png'}
+        src={preview || '/default-avatar.png'}
         alt="Avatar"
         className="w-20 h-20 rounded-full object-cover border-2 border-white shadow mx-auto"
       />
+
       <label className="absolute bottom-0 right-0 bg-white rounded-full p-1 cursor-pointer shadow">
         <CameraIcon className="w-4 h-4 text-gray-700" />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleUpload}
-          className="hidden"
-        />
+        <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
       </label>
-      {uploading && (
-        <div className="mt-2 text-sm text-gray-500">uploading…</div>
-      )}
+
+      {uploading && <div className="mt-2 text-sm text-gray-500">Uploading…</div>}
+      {error && <div className="mt-1 text-xs text-red-500">{error}</div>}
     </div>
   )
 }
