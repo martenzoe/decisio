@@ -1,60 +1,61 @@
-import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { updateDecision } from '../api/decision';
-import { useAuthStore } from '../store/useAuthStore';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { updateDecision } from '../api/decision'
+import { useAuthStore } from '../store/useAuthStore'
+import { useTranslation } from 'react-i18next'
 
 function EditDecision() {
-  const { t } = useTranslation();
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const token = useAuthStore.getState().token;
+  const { t } = useTranslation()
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const token = useAuthStore.getState().token
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [mode, setMode] = useState('');
-  const [type, setType] = useState('');
-  const [options, setOptions] = useState([]);
-  const [criteria, setCriteria] = useState([]);
-  const [evaluations, setEvaluations] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [mode, setMode] = useState('')
+  const [type, setType] = useState('')
+  const [options, setOptions] = useState([])
+  const [criteria, setCriteria] = useState([])
+  const [evaluations, setEvaluations] = useState({})
+  const [loading, setLoading] = useState(true)
+
+  const isAI = mode === 'ai'
 
   useEffect(() => {
     const fetchDecision = async () => {
-      const res = await fetch(`https://decisio.onrender.com/api/decision/${id}/details`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      const data = await res.json();
+      const res = await fetch(`/api/decision/${id}/details`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
       if (!res.ok) {
-        alert(t('editDecision.loadFailed'));
-        return;
+        alert(t('editDecision.loadFailed'))
+        return
       }
 
-      setName(data.decision.name);
-      setDescription(data.decision.description);
-      setMode(data.decision.mode);
-      setType(data.decision.type);
-      setOptions(data.options);
-      setCriteria(data.criteria);
+      setName(data.decision.name)
+      setDescription(data.decision.description)
+      setMode(data.decision.mode)
+      setType(data.decision.type)
+      setOptions(data.options)
+      setCriteria(data.criteria)
 
-      const grouped = {};
+      const grouped = {}
       data.evaluations.forEach(e => {
-        if (!grouped[e.option_id]) grouped[e.option_id] = {};
+        if (!grouped[e.option_id]) grouped[e.option_id] = {}
         grouped[e.option_id][e.criterion_id] = {
           value: e.value,
           explanation: e.explanation || ''
-        };
-      });
-      setEvaluations(grouped);
-      setLoading(false);
-    };
+        }
+      })
+      setEvaluations(grouped)
+      setLoading(false)
+    }
 
-    fetchDecision();
-  }, [id, token, t]);
+    fetchDecision()
+  }, [id, token, t])
 
   const handleEvaluationChange = (option_id, criterion_id, field, value) => {
+    if (isAI) return // bei AI gesperrt
     setEvaluations(prev => ({
       ...prev,
       [option_id]: {
@@ -64,33 +65,36 @@ function EditDecision() {
           [field]: value
         }
       }
-    }));
-  };
+    }))
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
-      const formattedEvaluations = [];
-      for (const option of options) {
-        for (const criterion of criteria) {
-          const evalObj = evaluations[option.id]?.[criterion.id];
-          if (evalObj && evalObj.value) {
-            formattedEvaluations.push({
-              option_index: options.findIndex(o => o.id === option.id),
-              criterion_index: criteria.findIndex(c => c.id === criterion.id),
-              value: Number(evalObj.value),
-              explanation: evalObj.explanation
-            });
+      // Evaluations nur senden, wenn NICHT AI
+      const formattedEvaluations = []
+      if (!isAI) {
+        for (const option of options) {
+          for (const criterion of criteria) {
+            const evalObj = evaluations[option.id]?.[criterion.id]
+            if (evalObj && evalObj.value) {
+              formattedEvaluations.push({
+                option_index: options.findIndex(o => o.id === option.id),
+                criterion_index: criteria.findIndex(c => c.id === criterion.id),
+                value: Number(evalObj.value),
+                explanation: evalObj.explanation
+              })
+            }
           }
         }
       }
 
-      const updatedOptions = options.map(o => ({ id: o.id, name: o.name }));
+      const updatedOptions = options.map(o => ({ id: o.id, name: o.name }))
       const updatedCriteria = criteria.map(c => ({
         id: c.id,
         name: c.name,
         importance: Number(c.importance)
-      }));
+      }))
 
       await updateDecision(id, token, {
         name,
@@ -99,18 +103,18 @@ function EditDecision() {
         type,
         options: updatedOptions,
         criteria: updatedCriteria,
-        evaluations: formattedEvaluations
-      });
+        evaluations: formattedEvaluations // leeres Array, wenn AI → server ändert nichts
+      })
 
-      alert(t('editDecision.updateSuccess'));
-      navigate(`/decision/${id}`);
+      alert(t('editDecision.updateSuccess'))
+      navigate(`/decision/${id}`)
     } catch (err) {
-      console.error(err);
-      alert(t('editDecision.saveFailed'));
+      console.error(err)
+      alert(t('editDecision.saveFailed'))
     }
-  };
+  }
 
-  if (loading) return <div className="p-8">⏳ {t('editDecision.loading')}</div>;
+  if (loading) return <div className="p-8">⏳ {t('editDecision.loading')}</div>
 
   return (
     <div className="max-w-4xl mx-auto p-8">
@@ -150,9 +154,9 @@ function EditDecision() {
               type="text"
               value={opt.name}
               onChange={e => {
-                const updated = [...options];
-                updated[i].name = e.target.value;
-                setOptions(updated);
+                const updated = [...options]
+                updated[i].name = e.target.value
+                setOptions(updated)
               }}
               className="w-full mb-2 p-2 border rounded"
             />
@@ -167,9 +171,9 @@ function EditDecision() {
                 type="text"
                 value={crit.name}
                 onChange={e => {
-                  const updated = [...criteria];
-                  updated[i].name = e.target.value;
-                  setCriteria(updated);
+                  const updated = [...criteria]
+                  updated[i].name = e.target.value
+                  setCriteria(updated)
                 }}
                 className="flex-1 p-2 border rounded"
               />
@@ -177,9 +181,9 @@ function EditDecision() {
                 type="number"
                 value={crit.importance}
                 onChange={e => {
-                  const updated = [...criteria];
-                  updated[i].importance = e.target.value;
-                  setCriteria(updated);
+                  const updated = [...criteria]
+                  updated[i].importance = e.target.value
+                  setCriteria(updated)
                 }}
                 className="w-20 p-2 border rounded"
               />
@@ -187,45 +191,58 @@ function EditDecision() {
           ))}
         </div>
 
-        <div>
-          <h3 className="font-semibold mb-2">🔢 {t('editDecision.evaluationsHeading')}</h3>
-          <table className="min-w-full border">
-            <thead>
-              <tr>
-                <th className="border p-2 text-left">{t('editDecision.optionColumn')}</th>
-                {criteria.map(c => (
-                  <th key={c.id} className="border p-2 text-left">{c.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {options.map(opt => (
-                <tr key={opt.id}>
-                  <td className="border p-2 font-medium">{opt.name}</td>
-                  {criteria.map(crit => (
-                    <td key={crit.id} className="border p-2">
-                      <input
-                        type="number"
-                        value={evaluations[opt.id]?.[crit.id]?.value || ''}
-                        onChange={e => handleEvaluationChange(opt.id, crit.id, 'value', e.target.value)}
-                        className="w-16 p-1 border rounded"
-                        min="1"
-                        max="10"
-                      />
-                    </td>
+          {/* Evaluations: bei AI geblockt */}
+          {isAI ? (
+            <div className="
+              p-4 rounded-md border text-sm
+              bg-yellow-50 text-yellow-900 border-yellow-300
+              dark:bg-yellow-900/40 dark:text-yellow-50 dark:border-yellow-700
+            ">
+              🔒 Evaluations are AI-controlled for this decision.
+              Adjust the <strong>criteria weights</strong> if you want to influence the result,
+              or switch mode to <strong>manual</strong> to edit scores yourself.
+            </div>
+          ) : (
+          <div>
+            <h3 className="font-semibold mb-2">🔢 {t('editDecision.evaluationsHeading')}</h3>
+            <table className="min-w-full border">
+              <thead>
+                <tr>
+                  <th className="border p-2 text-left">{t('editDecision.optionColumn')}</th>
+                  {criteria.map(c => (
+                    <th key={c.id} className="border p-2 text-left">{c.name}</th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {options.map(opt => (
+                  <tr key={opt.id}>
+                    <td className="border p-2 font-medium">{opt.name}</td>
+                    {criteria.map(crit => (
+                      <td key={crit.id} className="border p-2">
+                        <input
+                          type="number"
+                          value={evaluations[opt.id]?.[crit.id]?.value || ''}
+                          onChange={e => handleEvaluationChange(opt.id, crit.id, 'value', e.target.value)}
+                          className="w-16 p-1 border rounded"
+                          min="1"
+                          max="10"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
           💾 {t('editDecision.saveButton')}
         </button>
       </form>
     </div>
-  );
+  )
 }
 
-export default EditDecision;
+export default EditDecision

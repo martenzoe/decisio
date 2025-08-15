@@ -1,7 +1,66 @@
+// src/pages/DecisionDetail.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { formatDistanceToNow } from 'date-fns'
 import { useAuthStore } from '../store/useAuthStore'
+
+/* -------- AI summary client-cache (stable) -------- */
+const AI_CACHE_VERSION = 'v3'               // bump wenn sich Prompt/Modell ändert
+const AI_CACHE_TTL_MS = 1000 * 60 * 60 * 24 // 24h
+const DEBUG_AI_CACHE = false                // bei Bedarf auf true
+
+const normStr = (s) => String(s ?? '').trim()
+const normNum = (n) => Number(n ?? 0)
+
+function djb2Hash(str) {
+  let h = 5381
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i)
+  return (h >>> 0).toString(36)
+}
+
+function buildSummaryCacheKey(details) {
+  const decisionId = details?.decision?.id || ''
+  const name = normStr(details?.decision?.name || details?.decision?.title)
+  const description = normStr(details?.decision?.description)
+
+  // Optionen/Kriterien stabilisieren: normalisieren + sortieren
+  const options = (details?.options || [])
+    .map(o => normStr(o.name))
+    .sort((a, b) => a.localeCompare(b))
+
+  const criteria = (details?.criteria || [])
+    .map(c => ({ name: normStr(c.name), importance: normNum(c.importance) }))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.importance - b.importance)
+
+  const payload = { v: AI_CACHE_VERSION, decisionId, name, description, options, criteria }
+  const key = `ai:summary:${decisionId}:${djb2Hash(JSON.stringify(payload))}`
+  if (DEBUG_AI_CACHE) console.log('[AI cache] payload:', payload, 'key:', key)
+  return key
+}
+
+function readCache(key) {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const { ts, data } = JSON.parse(raw)
+    if (!ts || Date.now() - ts > AI_CACHE_TTL_MS) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return data
+  } catch {
+    return null
+  }
+}
+
+function writeCache(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }))
+  } catch {
+    /* ignore quota errors */
+  }
+}
+/* --------------------------------------------------- */
 
 export default function DecisionDetail() {
   const { id } = useParams()
@@ -14,7 +73,7 @@ export default function DecisionDetail() {
 
   const { user, token } = useAuthStore()
 
-  // NEW: AI summary state
+  // AI summary state
   const [aiLoading, setAiLoading] = useState(false)
   const [aiError, setAiError] = useState(null)
   const [aiSummary, setAiSummary] = useState(null)
@@ -25,6 +84,7 @@ export default function DecisionDetail() {
       fetchData()
       fetchComments()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, token, id])
 
   useEffect(() => {
@@ -40,24 +100,58 @@ export default function DecisionDetail() {
       if (!res.ok || !json.decision) throw new Error(json.error || 'No decision found')
       setData(json)
 
-      // If this is an AI decision, fetch a short AI summary (does NOT save anything)
       if (json.decision?.mode === 'ai') {
-        fetchAiSummary(json)
+        // 1) Falls Backend die Summary bereits mitliefert → direkt anzeigen & cachen
+        if (json.ai_summary || json.ai_top_option) {
+          const detailsForKey = {
+            decision: json.decision,
+            options: json.options,
+            criteria: json.criteria
+          }
+          const cacheKey = buildSummaryCacheKey(detailsForKey)
+          const payload = { summary: json.ai_summary || null, top_option: json.ai_top_option || null }
+          writeCache(cacheKey, payload)
+          setAiSummary(payload.summary)
+          setAiTopOption(payload.top_option)
+          setAiLoading(false)
+          setAiError(null)
+        } else {
+          // 2) Ansonsten zuerst Cache versuchen, dann Server-Endpoint (der DB-Caching nutzt)
+          fetchAiSummary(json) // Cache sorgt dafür, dass nicht neu gerechnet wird
+        }
+      } else {
+        setAiSummary(null)
+        setAiTopOption(null)
+        setAiError(null)
+        setAiLoading(false)
       }
     } catch (err) {
       setError(err.message)
     }
   }
 
-  // Only reads a summary/top option from the AI endpoint; does not persist anything.
+  // Summary nur erzeugen, wenn nichts Passendes im Cache liegt
   async function fetchAiSummary(details) {
-    setAiLoading(true)
-    setAiError(null)
     try {
-      const decisionName = details?.decision?.name || details?.decision?.title || ''
-      const description = details?.decision?.description || ''
-      const options = (details?.options || []).map(o => o.name)
-      const criteria = (details?.criteria || []).map(c => ({ name: c.name }))
+      setAiError(null)
+      const cacheKey = buildSummaryCacheKey(details)
+
+      const cached = readCache(cacheKey)
+      if (cached) {
+        if (DEBUG_AI_CACHE) console.log('[AI cache] HIT', cacheKey)
+        setAiSummary(cached.summary || null)
+        setAiTopOption(cached.top_option || null)
+        setAiLoading(false)
+        return
+      }
+
+      if (DEBUG_AI_CACHE) console.log('[AI cache] MISS', cacheKey)
+      setAiLoading(true)
+
+      const decisionName = normStr(details?.decision?.name || details?.decision?.title)
+      const description = normStr(details?.decision?.description)
+      const options = (details?.options || []).map(o => normStr(o.name))
+      const criteria = (details?.criteria || []).map(c => ({ name: normStr(c.name) }))
 
       const res = await fetch('/api/ai/recommendation', {
         method: 'POST',
@@ -71,9 +165,12 @@ export default function DecisionDetail() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'AI summary failed')
 
-      // From your ai.js: { recommendations, summary, top_option, top_option_index }
-      setAiSummary(json.summary || null)
-      setAiTopOption(json.top_option || null)
+      const summary = json.summary || null
+      const top = json.top_option || null
+
+      setAiSummary(summary)
+      setAiTopOption(top)
+      writeCache(cacheKey, { summary, top_option: top })
     } catch (e) {
       console.error('AI summary error:', e)
       setAiError(e.message)
@@ -108,7 +205,7 @@ export default function DecisionDetail() {
       method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization: { toString: () => `Bearer ${token}` } // robust gegen Header-Stringify
       },
       body: JSON.stringify(body)
     })
@@ -143,7 +240,7 @@ export default function DecisionDetail() {
     const evals = evaluations.filter(e => e.option_id === optionId)
     const total = evals.reduce((acc, e) => {
       const crit = criteria.find(c => c.id === e.criterion_id)
-      return acc + ((crit?.importance ?? 0) * e.value) / 100
+      return acc + ((normNum(crit?.importance) * normNum(e.value)) / 100)
     }, 0)
     return Math.round(total * 10) / 10
   }
@@ -163,7 +260,11 @@ export default function DecisionDetail() {
             <tr>
               <th className="border px-4 py-2">Option</th>
               {criteria.map(c => (
-                <th key={c.id} className="border px-4 py-2">{c.name}</th>
+                <th key={c.id} className="border px-4 py-2">
+                  <div>{c.name}</div>
+                  {/* Gewichtung anzeigen */}
+                  <div className="text-xs text-gray-500 dark:text-gray-400">w: {Number(c.importance) || 0}%</div>
+                </th>
               ))}
               <th className="border px-4 py-2">Total</th>
             </tr>
@@ -186,61 +287,51 @@ export default function DecisionDetail() {
           </tbody>
         </table>
 
-        {/* AI summary box (only for AI decisions) */}
+        {/* AI summary box – kein manueller Refresh */}
         {decision.mode === 'ai' && (
           <div className="mt-6">
             <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 rounded-lg p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-semibold">🤖 AI Summary</h4>
+              <div className="space-y-2">
+                <h4 className="font-semibold">🤖 AI Summary</h4>
 
-                  {aiLoading && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Generating summary …
-                    </p>
-                  )}
+                {aiLoading && (
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Generating summary …
+                  </p>
+                )}
 
-                  {aiError && (
-                    <p className="text-sm text-red-600">
-                      {aiError}
-                    </p>
-                  )}
+                {aiError && (
+                  <p className="text-sm text-red-600">
+                    {aiError}
+                  </p>
+                )}
 
-                  {!aiLoading && !aiError && (
-                    <>
-                      {aiTopOption && (
-                        <p className="text-sm">
-                          <span className="font-medium">🏆 Top option:</span> {aiTopOption}
-                        </p>
-                      )}
-                      {aiSummary && (
-                        <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">
-                          {aiSummary}
-                        </p>
-                      )}
-                      {!aiSummary && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          No AI summary available.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* Manual refresh button for summary */}
-                <button
-                  onClick={() => fetchAiSummary(data)}
-                  className="shrink-0 inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm border border-indigo-300 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-800 transition"
-                >
-                  🔄 Refresh
-                </button>
+                {!aiLoading && !aiError && (
+                  <>
+                    {aiTopOption && (
+                      <p className="text-sm">
+                        <span className="font-medium">🏆 Top option:</span> {aiTopOption}
+                      </p>
+                    )}
+                    {aiSummary && (
+                      <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-line">
+                        {aiSummary}
+                      </p>
+                    )}
+                    {!aiSummary && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        No AI summary available.
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Comments Section */}
+      {/* Comments */}
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6 space-y-4">
         <h3 className="text-xl font-semibold">💬 Comments</h3>
 

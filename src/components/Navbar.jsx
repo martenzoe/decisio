@@ -29,7 +29,7 @@ function Navbar() {
   const navItems = [
     { path: '/', label: 'navbar.home' },
     { path: '/dashboard', label: 'navbar.dashboard' },
-    { path: '/use-cases', label: 'navbar.useCases' }, // ⇐ NEU
+    { path: '/use-cases', label: 'navbar.useCases' },
     { path: '/faq', label: 'navbar.faq' },
     { path: '/kontakt', label: 'navbar.contact' }
   ]
@@ -95,8 +95,15 @@ function Navbar() {
   return (
     <nav className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 shadow-sm z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        {/* LOGO -> Dashboard (wenn eingeloggt), sonst Home */}
         <div className="flex items-center gap-2">
-          <img src={logo} alt="Decisia Logo" className="h-11" />
+          <Link
+            to={token ? '/dashboard' : '/'}
+            aria-label="Go to Dashboard"
+            className="inline-flex items-center"
+          >
+            <img src={logo} alt="Decisia Logo" className="h-11 cursor-pointer" />
+          </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-6">
